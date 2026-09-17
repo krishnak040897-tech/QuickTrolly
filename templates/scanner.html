@@ -1,0 +1,691 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<style>
+    :root {
+        --scan-laser-green: #0C831F;
+        --scan-laser-red: #ff3333;
+    }
+
+    .scanner-wrapper {
+        position: relative;
+        width: 100%;
+        background: #051207;
+        border-radius: 20px;
+        overflow: hidden;
+        border: 1px solid var(--border-flat);
+        aspect-ratio: 16 / 10; 
+        min-height: 240px;
+        transition: border-color 0.2s ease;
+    }
+
+    #reader {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    #reader video {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover !important;
+    }
+
+    #reader__dashboard_section_csr span, 
+    #reader__dashboard_section_swaplink {
+        display: none !important; 
+    }
+
+    .scan-laser {
+        position: absolute;
+        width: 100%;
+        height: 2px;
+        background: var(--scan-laser-green);
+        box-shadow: 0 0 12px var(--scan-laser-green);
+        top: 10%;
+        left: 0;
+        z-index: 10;
+        animation: scanMove 2.2s infinite linear;
+        pointer-events: none;
+        opacity: 0.8;
+        transition: all 0.2s ease;
+    }
+
+    .scan-laser.mode-remove {
+        background: var(--scan-laser-red);
+        box-shadow: 0 0 12px var(--scan-laser-red);
+    }
+
+    @keyframes scanMove {
+        0% { top: 12%; opacity: 0; }
+        15% { opacity: 1; }
+        85% { opacity: 1; }
+        100% { top: 88%; opacity: 0; }
+    }
+
+    .scanner-overlay {
+        position: absolute; 
+        top: 10px; 
+        left: 50%; 
+        transform: translateX(-50%);
+        background: rgba(9, 38, 14, 0.85); 
+        color: #fff; 
+        padding: 4px 14px; 
+        border-radius: var(--radius-pill);
+        font-size: 11px; 
+        font-weight: 600;
+        pointer-events: none; 
+        z-index: 20;
+        display: flex; 
+        align-items: center; 
+        gap: 6px;
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        white-space: nowrap;
+        transition: all 0.2s ease;
+    }
+
+    .scanner-overlay.mode-remove {
+        border-color: rgba(239, 68, 68, 0.3);
+        background: rgba(40, 10, 10, 0.85);
+    }
+    
+    .status-dot { 
+        width: 7px; 
+        height: 7px; 
+        background: var(--scan-laser-green); 
+        border-radius: 50%; 
+        box-shadow: 0 0 8px var(--scan-laser-green);
+        transition: all 0.2s ease;
+    }
+    .status-dot.paused { background: #ff9900; box-shadow: 0 0 8px #ff9900; }
+    .status-dot.processing { background: #00bcd4; box-shadow: 0 0 8px #00bcd4; }
+    .status-dot.mode-remove-active { background: var(--scan-laser-red); box-shadow: 0 0 8px var(--scan-laser-red); }
+
+    .scanner-controls {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr;
+        gap: 8px;
+        margin-top: 12px;
+        width: 100%;
+    }
+
+    .mode-switcher-inline {
+        display: flex;
+        background: var(--supermarket-green-light);
+        border: 1px solid var(--supermarket-green-border);
+        border-radius: var(--radius-pill);
+        padding: 3px;
+        width: 100%;
+    }
+
+    .mode-btn {
+        flex: 1;
+        padding: 0 8px;
+        border: none;
+        background: transparent;
+        font-weight: 700;
+        font-size: 12px;
+        color: var(--text-muted);
+        border-radius: var(--radius-pill);
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        white-space: nowrap;
+    }
+
+    .mode-btn.active[data-mode="add"] {
+        background: var(--supermarket-green);
+        color: #fff;
+    }
+
+    .mode-btn.active[data-mode="remove"] {
+        background: var(--alert-red);
+        color: #fff;
+    }
+
+    .manual-entry-section {
+        padding: 12px 16px;
+        background: var(--supermarket-green-light);
+        border-radius: 16px;
+        border: 1px solid var(--supermarket-green-border);
+    }
+
+    .manual-input {
+        border-radius: var(--radius-pill) !important;
+        border: 1px solid var(--border-flat) !important;
+        height: 36px;
+        font-size: 12.5px;
+        padding: 0 14px;
+    }
+    .manual-input:focus {
+        border-color: var(--supermarket-green) !important;
+        box-shadow: none !important;
+    }
+
+    .live-cart-section {
+        background: #fff;
+        border: 1px solid var(--border-flat);
+        border-radius: 16px;
+        margin-top: 12px;
+        display: flex;
+        flex-direction: column;
+        max-height: 320px;
+        overflow: hidden;
+    }
+
+    .live-cart-header {
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--border-flat);
+        background: var(--supermarket-green-light);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .live-cart-header h5 {
+        margin: 0;
+        font-size: 12.5px;
+        font-weight: 700;
+        color: var(--text-main);
+    }
+
+    .live-cart-items {
+        overflow-y: auto;
+        padding: 2px 0;
+        flex: 1;
+    }
+
+    .live-cart-item {
+        display: flex;
+        align-items: center;
+        padding: 8px 16px;
+        border-bottom: 1px solid var(--aisle-gray);
+    }
+    .live-cart-item:last-child { border-bottom: none; }
+
+    .lci-img {
+        width: 32px; height: 32px;
+        border-radius: 6px;
+        object-fit: cover;
+        border: 1px solid var(--border-flat);
+        flex-shrink: 0;
+    }
+
+    .lci-details {
+        flex: 1;
+        margin: 0 10px;
+        min-width: 0;
+    }
+
+    .lci-name {
+        font-size: 12.5px;
+        font-weight: 700;
+        color: var(--text-main);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .lci-price {
+        font-size: 11px;
+        color: var(--text-muted);
+    }
+
+    .lci-qty {
+        font-weight: 700;
+        font-size: 11px;
+        color: var(--supermarket-green);
+        background: var(--supermarket-green-light);
+        padding: 1px 8px;
+        border-radius: var(--radius-pill);
+        flex-shrink: 0;
+    }
+
+    .lci-empty {
+        padding: 30px;
+        text-align: center;
+        color: var(--text-sub);
+        font-size: 12px;
+        font-weight: 500;
+    }
+
+    .scanner-wrapper.mode-remove-border {
+        border-color: var(--alert-red);
+    }
+
+    .scanner-layout {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .product-preview-card {
+        background: #fff;
+        border: 1px solid var(--supermarket-green);
+        border-radius: 14px;
+        padding: 10px 12px;
+        margin-top: 2px;
+        display: none;
+        align-items: center;
+        gap: 10px;
+        box-shadow: 0 4px 16px rgba(12, 131, 31, 0.05);
+        animation: slideUp 0.2s ease-out;
+    }
+    
+    .product-preview-card.mode-remove {
+        border-color: var(--alert-red);
+    }
+    .product-preview-card.show { display: flex; }
+
+    @keyframes slideUp {
+        from { opacity: 0; transform: translateY(6px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .preview-img {
+        width: 40px; height: 40px;
+        border-radius: 6px;
+        object-fit: cover;
+    }
+
+    /* Core Action Color Elements Overrides */
+    .btn-white-text-solid {
+        background: var(--supermarket-green) !important;
+        border: 1px solid var(--supermarket-green) !important;
+        color: #ffffff !important;
+    }
+    .btn-white-text-solid:hover {
+        background: var(--supermarket-green-dark) !important;
+        border-color: var(--supermarket-green-dark) !important;
+    }
+
+    .badge-discount-tag {
+        font-size: 9px;
+        font-weight: 800;
+        background: #24b243;
+        color: white;
+        padding: 1px 5px;
+        border-radius: 4px;
+        margin-left: 4px;
+    }
+
+    @media (min-width: 992px) {
+        .scanner-layout { flex-direction: row; align-items: flex-start; gap: 16px; }
+        .scanner-column { flex: 1; min-width: 0; }
+        .scanner-column:first-child { flex: 1.3; }
+        .scanner-column:last-child { display: flex; flex-direction: column; gap: 12px; }
+        .scanner-wrapper { aspect-ratio: 4 / 3; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="text-align:center; margin-bottom: 16px;">
+    <h2 style="font-weight: 800; font-size: 18px; color: var(--text-main); margin: 0;">Smart Scanner</h2>
+    <p style="color: var(--text-muted); font-size: 12.5px; margin: 2px 0 0;">Point device camera directly at product labels</p>
+</div>
+
+<div class="scanner-layout">
+    <div class="scanner-column">
+        <div class="scanner-wrapper" id="scanner-wrapper">
+            <div id="reader"></div>
+            <div class="scan-laser" id="scan-laser"></div>
+            <div class="scanner-overlay" id="scanner-overlay">
+                <div class="status-dot" id="scan-status-dot"></div>
+                <span id="scan-status-text">Initializing camera feed...</span>
+            </div>
+        </div>
+
+        <div class="scanner-controls">
+            <div style="width: 100%;">
+                <button class="btn btn-white-text-solid w-100 py-2" id="start-scan-btn" onclick="startScanner()" style="height: 42px;">
+                    Start Feed
+                </button>
+                <button class="btn btn-market-outline w-100 py-2" id="stop-scan-btn" onclick="stopScanner()" style="display:none; color: var(--alert-red); border-color: var(--alert-red); background: #fff; height: 42px;">
+                    Kill Camera
+                </button>
+            </div>
+            
+            <div class="mode-switcher-inline">
+                <button class="mode-btn active" data-mode="add" onclick="setScanMode('add')">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                    Add
+                </button>
+                <button class="mode-btn" data-mode="remove" onclick="setScanMode('remove')">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                    Remove
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="scanner-column">
+        <div class="manual-entry-section">
+            <label style="font-size: 10.5px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em;">Manual entry lookup</label>
+            <div style="display: flex; gap: 8px;">
+                <input type="text" id="manual-barcode" class="form-control manual-input" placeholder="Enter barcode SKU..." style="flex: 1;">
+                <button class="btn btn-white-text-solid" onclick="handleManualEntry()" id="manual-btn" style="padding: 0 14px; font-size: 12px; height: 36px;">
+                    Add Code
+                </button>
+            </div>
+        </div>
+
+        <div class="product-preview-card" id="product-preview">
+            <img id="preview-image" src="" alt="Product Log View" class="preview-img">
+            <div style="flex: 1; min-width: 0;">
+                <div style="font-weight: 700; font-size: 12.5px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" id="preview-name">SKU Name</div>
+                <div style="display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+                    <span style="color: var(--supermarket-green); font-weight: 700; font-size: 12.5px;" id="preview-price">₹0.00</span>
+                    <span style="color: var(--text-muted); text-decoration: line-through; font-size: 11px;" id="preview-orig-price">₹0.00</span>
+                </div>
+            </div>
+            <div id="preview-icon-container" style="color: var(--supermarket-green);">
+                <svg id="preview-svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+        </div>
+
+        <div class="live-cart-section">
+            <div class="live-cart-header">
+                <h5>Current Trolley (<span id="cart-count-label">0</span>)</h5>
+                <div style="font-size: 12.5px; font-weight: 700; color: var(--supermarket-green);" id="cart-total-label">₹0.00</div>
+            </div>
+            <div class="live-cart-items" id="live-cart-container">
+                <div class="lci-empty">Cart stream sleeping...</div>
+            </div>
+            <div style="padding: 8px; border-top: 1px solid var(--border-flat);">
+                <a href="{{ url_for('cart') }}" class="btn btn-white-text-solid w-100 py-2 d-flex align-items-center justify-content-center" style="font-size: 12.5px; height: 42px; font-weight: 700;">
+                    View Detailed Trolley
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+<script>
+var html5QrcodeScanner = null;
+var isProcessing = false;
+var isScanning = false;
+var audioContext = null;
+var currentMode = 'add';
+
+function initAudio() {
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+}
+
+function playBeep(isRemove) {
+    try {
+        initAudio();
+        if (audioContext.state === 'suspended') audioContext.resume();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.value = isRemove ? 520 : 980; 
+        oscillator.type = 'sine';
+        gainNode.gain.setValueAtTime(0.08, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.08);
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.08);
+    } catch (e) { console.log('Audio error', e); }
+}
+
+function updateStatus(text, state) {
+    const el = document.getElementById('scan-status-text');
+    const dot = document.getElementById('scan-status-dot');
+    const laser = document.getElementById('scan-laser');
+    
+    if(el) el.innerText = text;
+    dot.className = 'status-dot';
+    
+    if (state === 'paused') {
+        dot.classList.add('paused');
+        if(laser) laser.style.display = 'none';
+    } else if (state === 'processing') {
+        dot.classList.add('processing');
+        if(laser) laser.style.display = 'none';
+    } else {
+        if(laser) laser.style.display = 'block';
+        if(currentMode === 'remove') dot.classList.add('mode-remove-active');
+    }
+}
+
+function setScanMode(mode) {
+    currentMode = mode;
+    
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+        if (btn.dataset.mode === mode) btn.classList.add('active');
+        else btn.classList.remove('active');
+    });
+
+    const wrapper = document.getElementById('scanner-wrapper');
+    const overlay = document.getElementById('scanner-overlay');
+    const laser = document.getElementById('scan-laser');
+    const manualBtn = document.getElementById('manual-btn');
+
+    if (mode === 'remove') {
+        wrapper.classList.add('mode-remove-border');
+        overlay.classList.add('mode-remove');
+        laser.classList.add('mode-remove');
+        manualBtn.innerText = 'Remove Code';
+        manualBtn.className = 'btn btn-danger text-white';
+        manualBtn.style.backgroundColor = 'var(--alert-red)';
+        manualBtn.style.borderColor = 'var(--alert-red)';
+    } else {
+        wrapper.classList.remove('mode-remove-border');
+        overlay.classList.remove('mode-remove');
+        laser.classList.remove('mode-remove');
+        manualBtn.innerText = 'Add Code';
+        manualBtn.className = 'btn btn-white-text-solid';
+        manualBtn.style.backgroundColor = '';
+        manualBtn.style.borderColor = '';
+    }
+
+    if(isScanning) {
+        updateStatus(mode === 'add' ? "Scanning (Add Mode)" : "Scanning (Remove Mode)", 'scanning');
+    }
+}
+
+function showProductPreview(product) {
+    const preview = document.getElementById('product-preview');
+    const iconContainer = document.getElementById('preview-icon-container');
+    
+    document.getElementById('preview-image').src = product.image || 'https://placehold.co/60x60/f6f9f6/a1b5a5?text=?';
+    document.getElementById('preview-name').innerText = product.name;
+    document.getElementById('preview-price').innerText = `₹${parseFloat(product.price).toFixed(2)}`;
+    
+    const origPriceEl = document.getElementById('preview-orig-price');
+    if(product.original_price && parseFloat(product.original_price) > parseFloat(product.price)) {
+        origPriceEl.innerText = `₹${parseFloat(product.original_price).toFixed(2)}`;
+        origPriceEl.style.display = 'inline';
+    } else {
+        origPriceEl.style.display = 'none';
+    }
+    
+    if (currentMode === 'remove') {
+        preview.classList.add('mode-remove');
+        iconContainer.style.color = 'var(--alert-red)';
+        iconContainer.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
+    } else {
+        preview.classList.remove('mode-remove');
+        iconContainer.style.color = 'var(--supermarket-green)';
+        iconContainer.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+    }
+
+    preview.classList.add('show');
+    setTimeout(() => { preview.classList.remove('show'); }, 3000);
+}
+
+async function processBarcode(code) {
+    if (isProcessing) return;
+    isProcessing = true;
+    updateStatus("Processing SKU...", 'processing');
+    
+    try {
+        const res = await fetch('/api/scan/' + encodeURIComponent(code));
+        const data = await res.json();
+        
+        if (data.success && data.product) {
+            playBeep(currentMode === 'remove');
+            let success = false;
+
+            if (currentMode === 'add') {
+                success = await window.QtCart.add(data.product);
+            } else {
+                success = await window.QtCart.remove(data.product);
+            }
+            
+            showProductPreview(data.product);
+            updateCartCount(); 
+            updateLiveCartList();
+        } else {
+            if (window.QtToast) window.QtToast.show('SKU not cataloged in database', 'error');
+        }
+    } catch (err) {
+        console.error(err);
+    }
+    
+    setTimeout(() => {
+        isProcessing = false;
+        if (isScanning) {
+            updateStatus(currentMode === 'add' ? "Scanning (Add Mode)" : "Scanning (Remove Mode)", 'scanning');
+        }
+    }, 1200);
+}
+
+function onScanSuccess(decodedText, decodedResult) {
+    if (isProcessing || !isScanning) return;
+    processBarcode(decodedText);
+}
+
+function startScanner() {
+    const config = { 
+        fps: 20,
+        qrbox: null,
+        aspectRatio: 1.2,
+        formatsToSupport: [ 
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8,
+            Html5QrcodeSupportedFormats.UPC_A,
+            Html5QrcodeSupportedFormats.QR_CODE
+        ]
+    };
+    
+    if (html5QrcodeScanner) {
+        try { html5QrcodeScanner.clear(); } catch(e){}
+    }
+    
+    html5QrcodeScanner = new Html5Qrcode("reader");
+    html5QrcodeScanner.start({ facingMode: "environment" }, config, onScanSuccess, (err) => {})
+        .then(() => {
+            isScanning = true;
+            updateStatus(currentMode === 'add' ? "Scanning (Add Mode)" : "Scanning (Remove Mode)", 'scanning');
+            document.getElementById('start-scan-btn').style.display = 'none';
+            document.getElementById('stop-scan-btn').style.display = 'inline-block';
+        })
+        .catch(err => {
+            console.error(err);
+            updateStatus("Camera Refused Connection", 'paused');
+        });
+}
+
+function stopScanner() {
+    if (html5QrcodeScanner) {
+        html5QrcodeScanner.stop().then(() => {
+            html5QrcodeScanner.clear();
+            isScanning = false;
+            updateStatus("Camera Suspended", 'paused');
+            document.getElementById('start-scan-btn').style.display = 'inline-block';
+            document.getElementById('stop-scan-btn').style.display = 'none';
+        }).catch(err => console.error(err));
+    }
+}
+
+function handleManualEntry() {
+    const code = document.getElementById('manual-barcode').value.trim();
+    if (code) {
+        processBarcode(code);
+        document.getElementById('manual-barcode').value = '';
+    }
+}
+
+async function updateCartCount() {
+    const cart = await window.QtCart.get();
+    const count = cart.reduce((a, b) => a + (parseInt(b.qty) || 0), 0);
+    const el = document.getElementById('cart-badge-global');
+    if(el) el.innerText = count;
+}
+
+async function updateLiveCartList() {
+    const cart = await window.QtCart.get();
+    const container = document.getElementById('live-cart-container');
+    const countLabel = document.getElementById('cart-count-label');
+    const totalLabel = document.getElementById('cart-total-label');
+
+    if (!cart || cart.length === 0) {
+        container.innerHTML = '<div class="lci-empty">Your trolley is currently empty</div>';
+        countLabel.innerText = '0';
+        totalLabel.innerText = '₹0.00';
+        return;
+    }
+
+    let total = 0;
+    let html = '';
+
+    cart.forEach(item => {
+        const qty = parseInt(item.qty) || 1;
+        const price = parseFloat(item.price) || 0;
+        const origPrice = parseFloat(item.original_price) || price;
+        total += price * qty;
+
+        let discountTag = '';
+        if (origPrice > price) {
+            const pct = Math.round(((origPrice - price) / origPrice) * 100);
+            discountTag = `<span class="badge-discount-tag">${pct}% OFF</span>`;
+        }
+
+        html += `
+            <div class="live-cart-item">
+                <img src="${item.image || 'https://placehold.co/40x40/f6f9f6/a1b5a5?text=?'}" class="lci-img" alt="${item.name}">
+                <div class="lci-details">
+                    <div class="lci-name" title="${item.name}">${item.name}</div>
+                    <div class="lci-price">
+                        ₹${price.toFixed(2)} x ${qty}
+                        ${discountTag}
+                    </div>
+                </div>
+                <div class="lci-qty">${qty}</div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+    countLabel.innerText = cart.length;
+    totalLabel.innerText = '₹' + total.toFixed(2);
+}
+
+window.refreshScannerUI = function() {
+    updateCartCount();
+    updateLiveCartList();
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    window.refreshScannerUI();
+    setTimeout(startScanner, 600);
+    
+    document.getElementById('manual-barcode').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleManualEntry();
+    });
+});
+</script>
+{% endblock %}

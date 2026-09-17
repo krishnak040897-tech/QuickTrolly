@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<style>
+    /* Super-Compact Authentication Card Architecture */
+    .signup-container-card {
+        width: 100%;
+        max-width: 380px;
+        background: #ffffff; 
+        border: 1px solid var(--border-flat); 
+        border-radius: 20px; 
+        padding: 24px;
+        box-shadow: 0 4px 20px rgba(12, 131, 31, 0.02) !important;
+        margin: 0 auto;
+    }
+
+    .auth-header-block {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .brand-icon-circle {
+        width: 48px; height: 48px;
+        background: var(--supermarket-green-light);
+        border: 1px solid var(--supermarket-green-border);
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 10px;
+        color: var(--supermarket-green);
+    }
+
+    .auth-title {
+        font-weight: 800; 
+        font-size: 20px; 
+        letter-spacing: -0.03em; 
+        color: var(--text-main); 
+        margin-bottom: 2px;
+    }
+
+    .auth-subtitle {
+        color: var(--text-muted); 
+        font-size: 12.5px;
+        margin-bottom: 0;
+    }
+
+    .form-group-row {
+        margin-bottom: 12px;
+    }
+
+    .form-label {
+        font-weight: 700;
+        color: var(--text-main);
+        font-size: 11px;
+        margin-bottom: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        display: block;
+    }
+
+    .form-hint {
+        font-size: 10.5px;
+        color: var(--text-muted);
+        margin-top: 2px;
+        padding-left: 2px;
+    }
+
+    /* Seamless Oval Inputs */
+    .signup-input-field {
+        border-radius: var(--radius-pill) !important;
+        border: 1px solid var(--border-flat) !important;
+        height: 40px;
+        font-size: 13px;
+        color: var(--text-main);
+        background-color: var(--canvas-white);
+        padding-left: 38px !important;
+        transition: all 0.2s ease !important;
+    }
+
+    .signup-input-field:focus {
+        border-color: var(--supermarket-green) !important;
+        background-color: var(--supermarket-green-light) !important;
+        box-shadow: none !important;
+    }
+
+    .input-icon-vector {
+        position: absolute; 
+        left: 14px; 
+        top: 50%; 
+        transform: translateY(-50%); 
+        color: var(--supermarket-green);
+        width: 14px;
+        height: 14px;
+    }
+
+    /* Action Buttons Architecture */
+    .btn-signup-submit {
+        background: var(--supermarket-green) !important;
+        color: #ffffff !important;
+        border: none !important;
+        border-radius: var(--radius-pill) !important;
+        height: 40px;
+        font-size: 13.5px;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 4px;
+        transition: transform 0.15s ease, background-color 0.15s ease !important;
+    }
+
+    .btn-signup-submit:hover {
+        background: var(--supermarket-green-dark) !important;
+        transform: translateY(-1px);
+    }
+
+    .divider-row {
+        display: flex; 
+        align-items: center; 
+        gap: 10px; 
+        margin: 16px 0;
+    }
+
+    .divider-line {
+        flex: 1; 
+        height: 1px; 
+        background: var(--border-flat);
+    }
+
+    .divider-text {
+        font-size: 10.5px; 
+        color: var(--text-sub); 
+        font-weight: 700; 
+        text-transform: uppercase; 
+        letter-spacing: 0.05em;
+    }
+
+    .btn-signup-secondary {
+        background: var(--supermarket-green-light) !important;
+        color: var(--supermarket-green) !important;
+        border: 1px solid var(--supermarket-green-border) !important;
+        border-radius: var(--radius-pill) !important;
+        height: 40px;
+        font-size: 13px;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.15s ease !important;
+    }
+
+    .btn-signup-secondary:hover {
+        background: var(--border-flat) !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="signup-container-card">
+    <!-- HEADER BANNER MODULE -->
+    <div class="auth-header-block">
+        <div class="brand-icon-circle">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+        </div>
+        <h3 class="auth-title">Create Account</h3>
+        <p class="auth-subtitle">Sign up to launch your digital cart trolley</p>
+    </div>
+
+    <!-- TRANSACTION INPUT INTERFACES -->
+    <form method="POST" id="signup-form" novalidate>
+        <div class="form-group-row">
+            <label class="form-label">Full Name</label>
+            <div style="position: relative;">
+                <svg class="input-icon-vector" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <input type="text" name="name" class="form-control signup-input-field" placeholder="John Doe" id="s-name">
+            </div>
+        </div>
+
+        <div class="form-group-row">
+            <label class="form-label">Email Address</label>
+            <div style="position: relative;">
+                <svg class="input-icon-vector" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                <input type="email" name="email" class="form-control signup-input-field" placeholder="john@example.com" id="s-email">
+            </div>
+        </div>
+        
+        <div class="form-group-row" style="margin-bottom: 16px;">
+            <label class="form-label">Secure Password</label>
+            <div style="position: relative;">
+                <svg class="input-icon-vector" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <input type="password" name="password" class="form-control signup-input-field" placeholder="••••••••" id="s-pass">
+            </div>
+            <div class="form-hint">Must be at least 6 characters</div>
+        </div>
+
+        <button type="submit" class="btn btn-signup-submit w-100" id="signup-btn">
+            <span id="signup-btn-text">Create account</span>
+            <span id="signup-spinner" class="spinner-border spinner-border-sm d-none ms-2" style="width: 13px; height: 13px; border-width: 2px;"></span>
+        </button>
+    </form>
+
+    <div class="divider-row">
+        <div class="divider-line"></div>
+        <span class="divider-text">Have an account?</span>
+        <div class="divider-line"></div>
+    </div>
+
+    <a href="{{ url_for('login') }}" class="btn btn-signup-secondary w-100">
+        Log in instead
+    </a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('signup-form').addEventListener('submit', function (e) {
+    var nameNode = document.getElementById('s-name').value.trim();
+    var emailNode = document.getElementById('s-email').value.trim();
+    var passNode = document.getElementById('s-pass').value;
+    
+    if (!nameNode || !emailNode || !passNode) { 
+        e.preventDefault(); 
+        if (window.QtToast) {
+            QtToast.show('Please complete all form fields', 'error'); 
+        } else {
+            alert('Please complete all form fields');
+        }
+        return; 
+    }
+    if (passNode.length < 6) { 
+        e.preventDefault(); 
+        if (window.QtToast) {
+            QtToast.show('Password needs to be 6 characters minimum', 'error'); 
+        } else {
+            alert('Password needs to be 6 characters minimum');
+        }
+        return; 
+    }
+    
+    document.getElementById('signup-btn').disabled = true;
+    document.getElementById('signup-btn-text').textContent = 'Creating account...';
+    document.getElementById('signup-spinner').classList.remove('d-none');
+});
+</script>
+{% endblock %}

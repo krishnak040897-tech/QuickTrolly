@@ -1,0 +1,410 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<style>
+    .checkout-title {
+        font-weight: 800;
+        font-size: 20px;
+        color: var(--text-main);
+        letter-spacing: -0.02em;
+        margin-bottom: 16px;
+        margin-top: 2px;
+    }
+
+    .checkout-card {
+        background: #ffffff;
+        border: 1px solid var(--border-flat);
+        border-radius: var(--radius-box);
+        padding: 20px;
+    }
+
+    .form-label {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 6px;
+    }
+
+    .checkout-input {
+        border-radius: var(--radius-pill) !important;
+        border: 1px solid var(--border-flat) !important;
+        height: 38px;
+        font-size: 13px;
+        padding: 0 16px;
+    }
+    .checkout-input:focus {
+        border-color: var(--supermarket-green) !important;
+        box-shadow: none !important;
+    }
+
+    .checkout-textarea {
+        border-radius: 16px !important;
+        border: 1px solid var(--border-flat) !important;
+        font-size: 13px;
+        padding: 12px 16px;
+    }
+    .checkout-textarea:focus {
+        border-color: var(--supermarket-green) !important;
+        box-shadow: none !important;
+    }
+
+    .checkout-payable-banner {
+        background: var(--supermarket-green);
+        border-radius: var(--radius-pill);
+        padding: 12px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 14px;
+    }
+
+    .btn-pay-engine {
+        background: var(--supermarket-green) !important;
+        color: #ffffff !important;
+        border: none !important;
+        border-radius: var(--radius-pill) !important;
+        height: 44px;
+        font-size: 14px;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        transition: all 0.15s ease;
+    }
+    .btn-pay-engine:hover {
+        background: var(--supermarket-green-dark) !important;
+        transform: translateY(-1px);
+    }
+    .btn-pay-engine:disabled {
+        background: var(--border-flat) !important;
+        color: var(--text-sub) !important;
+        transform: none;
+        cursor: not-allowed;
+    }
+
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12.5px;
+        margin-bottom: 8px;
+        color: var(--text-muted);
+    }
+
+    .checkout-item-mrp-strike {
+        text-decoration: line-through;
+        font-size: 11px;
+        color: var(--text-sub);
+        margin-left: 6px;
+    }
+
+    .badge-savings-pill {
+        font-size: 10px;
+        font-weight: 800;
+        background: #e4f8ea;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+        padding: 2px 8px;
+        border-radius: var(--radius-pill);
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2 class="checkout-title">Secure Checkout</h2>
+
+<div class="row justify-content-center g-3">
+    <div class="col-lg-7 order-1">
+        <div class="checkout-card">
+            <p style="font-weight:800; font-size:15px; color:var(--text-main); margin-bottom:18px; display:flex; align-items:center; gap:8px;">
+                <span style="background:var(--supermarket-green); color:#fff; width:24px; height:24px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:12px; font-weight:800;">1</span>
+                Delivery Information
+            </p>
+            
+            <form id="checkout-form" novalidate>
+                <div class="mb-3">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" id="c-name" class="form-control checkout-input" placeholder="E.g. Yellesh Kumar" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Mobile Number</label>
+                    <div style="position:relative;">
+                        <span style="position:absolute; left:16px; top:50%; transform:translateY(-50%); font-size:13px; font-weight:700; color:var(--text-muted);">+91</span>
+                        <input type="tel" id="c-phone" class="form-control checkout-input" placeholder="10-digit mobile number" style="padding-left:52px;" required>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="form-label">Delivery Address</label>
+                    <textarea id="c-address" class="form-control checkout-textarea" rows="3" placeholder="Flat/House no, Building, Street, Area, Pincode" required></textarea>
+                </div>
+
+                <div style="border:1px solid var(--supermarket-green-border); border-radius:16px; padding:14px 16px; background:var(--supermarket-green-light); margin-bottom:24px; display:flex; gap:10px; align-items:flex-start;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--supermarket-green)" stroke-width="2.5" style="margin-top:2px; flex-shrink:0;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    <div>
+                        <p style="font-weight:700; font-size:12.5px; color:var(--text-main); margin:0 0 2px;">Secured Gateway Payment</p>
+                        <p style="font-size:11.5px; color:var(--text-muted); margin:0;">
+                            Transactions are handled via Razorpay merchant engine. Credit/Debit Cards, Netbanking, UPI, and Wallets are fully supported.
+                        </p>
+                    </div>
+                </div>
+
+                <button type="button" id="pay-btn" class="btn btn-pay-engine w-100">
+                    <span id="btn-text" style="display:inline-flex; align-items:center; gap:6px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        Pay and Authorize Order
+                    </span>
+                    <span id="btn-spinner" class="spinner-border spinner-border-sm d-none ms-2" style="width:16px; height:16px; border-width:2px;"></span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-lg-5 order-2">
+        <div class="checkout-card" style="position:sticky; top:80px;">
+            <p style="font-weight:800; font-size:14px; color:var(--text-main); margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--supermarket-green)" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Trolley Bill Summary
+            </p>
+            
+            <div id="checkout-items" style="margin-bottom:12px; max-height:260px; overflow-y:auto; padding-right:4px;"></div>
+            
+            <div style="height:1px; background:var(--border-flat); margin-bottom:12px;"></div>
+
+            <div class="summary-row" style="margin-bottom:8px;">
+                <span>Total Retail M.R.P</span>
+                <span id="checkout-subtotal" style="font-weight:600; color:var(--text-muted); text-decoration: line-through;">₹0.00</span>
+            </div>
+            <div class="summary-row" style="margin-bottom:8px;" id="row-savings-allocation">
+                <span>Trolley Special Discounts</span>
+                <span id="checkout-savings-total" style="font-weight:700; color:#24b243;">-₹0.00</span>
+            </div>
+            <div class="summary-row" style="margin-bottom:12px;">
+                <span>Digital Convenience Fee</span>
+                <span style="font-weight:700; color:var(--supermarket-green);">FREE</span>
+            </div>
+
+            <div class="checkout-payable-banner">
+                <span style="color:#ffffff; font-weight:700; font-size:14px;">Total Payable</span>
+                <span style="color:#ffffff; font-weight:800; font-size:18px; letter-spacing:-0.02em;" id="checkout-total">₹0.00</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+<script>
+    let currentTotalAmount = 0;
+    let rzpInstance = null;
+
+    async function loadCheckoutData() {
+        const cart = await window.QtCart.get();
+        const itemsContainer = document.getElementById('checkout-items');
+        const totalEl = document.getElementById('checkout-total');
+        const subtotalEl = document.getElementById('checkout-subtotal');
+        const savingsEl = document.getElementById('checkout-savings-total');
+        const payBtn = document.getElementById('pay-btn');
+
+        if (!cart || !cart.length) {
+            itemsContainer.innerHTML = `
+                <div style="text-align:center; padding:32px 10px; color:var(--text-sub); font-weight:600;">
+                    Your self-checkout basket is empty.<br>
+                    <a href="/scanner" style="color:var(--supermarket-green); font-weight:700; text-decoration:underline; display:inline-block; margin-top:8px;">Open Live Scanner</a>
+                </div>`;
+            totalEl.innerText = '₹0.00';
+            subtotalEl.innerText = '₹0.00';
+            payBtn.disabled = true;
+            currentTotalAmount = 0;
+            return;
+        }
+
+        payBtn.disabled = false;
+
+        let totalSelling = 0;
+        let totalMRP = 0;
+        let html = '';
+
+        cart.forEach(item => {
+            const price = parseFloat(item.price) || 0;
+            const origPrice = parseFloat(item.original_price) || price;
+            const qty = parseInt(item.qty) || 0;
+            
+            const itemSellingTotal = price * qty;
+            const itemMRPTotal = origPrice * qty;
+
+            totalSelling += itemSellingTotal;
+            totalMRP += itemMRPTotal;
+
+            let discountSnippet = '';
+            let discountBadge = '';
+            
+            if (origPrice > price) {
+                discountSnippet = `<span class="checkout-item-mrp-strike">₹${itemMRPTotal.toFixed(2)}</span>`;
+                const pct = Math.round(((origPrice - price) / origPrice) * 100);
+                discountBadge = `<span class="badge-savings-pill" style="margin-top:2px;">${pct}% OFF</span>`;
+            }
+
+            html += `
+                <div style="display:flex; justify-content:space-between; align-items:center; font-size:12.5px; padding:10px 0; border-bottom:1px dashed var(--border-flat);">
+                    <div style="max-width:65%;">
+                        <div style="color:var(--text-main); font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${item.name}</div>
+                        <div style="color:var(--text-muted); font-size:11px; margin-top:1px; display:flex; align-items:center; gap:6px;">
+                            <span>Qty: ${qty} &times; ₹${price.toFixed(2)}</span>
+                            ${discountBadge}
+                        </div>
+                    </div>
+                    <div style="text-align:right;">
+                        <span style="font-weight:700; color:var(--text-main);">₹${itemSellingTotal.toFixed(2)}</span>
+                        <div>${discountSnippet}</div>
+                    </div>
+                </div>
+            `;
+        });
+
+        itemsContainer.innerHTML = html;
+        currentTotalAmount = totalSelling;
+        
+        totalEl.innerText = '₹' + totalSelling.toFixed(2);
+        subtotalEl.innerText = '₹' + totalMRP.toFixed(2);
+        
+        const savingsDiff = totalMRP - totalSelling;
+        if (savingsDiff > 0) {
+            savingsEl.innerText = '-₹' + savingsDiff.toFixed(2);
+            document.getElementById('row-savings-allocation').style.display = 'flex';
+            
+            const mobileSavingsLabel = document.querySelector('.global-cart-savings-label');
+            if (mobileSavingsLabel) {
+                mobileSavingsLabel.innerText = 'Saved ₹' + savingsDiff.toFixed(2);
+                mobileSavingsLabel.style.display = 'inline-flex';
+            }
+        } else {
+            document.getElementById('row-savings-allocation').style.display = 'none';
+            const mobileSavingsLabel = document.querySelector('.global-cart-savings-label');
+            if (mobileSavingsLabel) mobileSavingsLabel.style.display = 'none';
+        }
+    }
+
+    function openRazorpayCheckout() {
+        const name = document.getElementById('c-name').value.trim();
+        const phone = document.getElementById('c-phone').value.trim();
+        const address = document.getElementById('c-address').value.trim();
+
+        if (!name || !phone || !address) {
+            if (window.QtToast) window.QtToast.show('Please complete form delivery fields.', 'error');
+            return;
+        }
+        if (phone.replace(/\D/g, '').length !== 10) {
+            if (window.QtToast) window.QtToast.show('Provide a valid 10-digit mobile number.', 'error');
+            return;
+        }
+        if (currentTotalAmount <= 0) {
+            if (window.QtToast) window.QtToast.show('Trolley allocation price verification failed.', 'error');
+            return;
+        }
+
+        const btn = document.getElementById('pay-btn');
+        const btnText = document.getElementById('btn-text');
+        const spinner = document.getElementById('btn-spinner');
+        
+        btn.disabled = true;
+        btnText.innerText = 'Opening gateway channel...';
+        spinner.classList.remove('d-none');
+
+        const options = {
+            key: "{{ key_id }}",
+            amount: (currentTotalAmount * 100).toString(),
+            currency: "INR",
+            name: "QuickTrolly",
+            description: "Self-Checkout Digital Clearance Billing",
+            image: "https://placehold.co/120x120/0c831f/ffffff?text=QT",
+            prefill: {
+                name: name,
+                email: "{{ session.get('email', '') }}",
+                contact: "+91" + phone
+            },
+            notes: {
+                address: address
+            },
+            theme: {
+                color: "#0C831F"
+            },
+            handler: function (response) {
+                const razorpay_payment_id = response.razorpay_payment_id;
+
+                fetch('/checkout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: name,
+                        phone: phone,
+                        address: address,
+                        razorpay_payment_id: razorpay_payment_id
+                    })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.href = '/success?order_id=' + data.order_id;
+                    } else {
+                        if (window.QtToast) window.QtToast.show(data.message || 'Database creation mapping refused.', 'error');
+                        resetButtonState();
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    if (window.QtToast) window.QtToast.show('Network validation timed out.', 'error');
+                    resetButtonState();
+                });
+            },
+            modal: {
+                ondismiss: function() {
+                    resetButtonState();
+                    if (window.QtToast) window.QtToast.show('Payment allocation channel dropped.', 'info');
+                }
+            }
+        };
+
+        try {
+            rzpInstance = new Razorpay(options);
+            rzpInstance.open();
+        } catch (err) {
+            console.error(err);
+            if (window.QtToast) window.QtToast.show('Failed initialization with gateway network.', 'error');
+            resetButtonState();
+        }
+    }
+
+    function resetButtonState() {
+        const btn = document.getElementById('pay-btn');
+        const btnText = document.getElementById('btn-text');
+        const spinner = document.getElementById('btn-spinner');
+        
+        btn.disabled = false;
+        btnText.innerHTML = `
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="margin-right:2px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            Pay and Authorize Order`;
+        spinner.classList.add('d-none');
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        loadCheckoutData();
+
+        document.getElementById('c-phone').addEventListener('input', function () {
+            this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);
+        });
+
+        document.getElementById('pay-btn').addEventListener('click', openRazorpayCheckout);
+    });
+
+    window.refreshCheckoutUI = loadCheckoutData;
+</script>
+{% endblock %}

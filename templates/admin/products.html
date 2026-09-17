@@ -1,0 +1,410 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<style>
+    .admin-title-panel {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+    }
+
+    .admin-search-wrap {
+        position: relative;
+        width: 100%;
+        max-width: 340px;
+        margin-bottom: 20px;
+    }
+
+    .admin-search-wrap svg {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-muted);
+        pointer-events: none;
+    }
+
+    .admin-search-wrap input {
+        padding-left: 38px;
+        border-radius: var(--radius-pill) !important;
+        border: 1px solid var(--border-flat) !important;
+        height: 38px;
+        font-size: 13px;
+    }
+
+    .admin-search-wrap input:focus {
+        border-color: var(--supermarket-green) !important;
+        box-shadow: none !important;
+    }
+
+    .admin-inventory-card {
+        background: #ffffff;
+        border: 1px solid var(--border-flat);
+        border-radius: var(--radius-box);
+        overflow: hidden;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .admin-inventory-card:hover {
+        border-color: var(--supermarket-green);
+        box-shadow: 0 6px 20px rgba(12, 131, 31, 0.04) !important;
+    }
+
+    .admin-image-viewport {
+        position: relative;
+        background: var(--aisle-gray);
+        border-bottom: 1px solid var(--border-flat);
+        height: 130px;
+        width: 100%;
+        overflow: hidden;
+    }
+
+    .admin-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .admin-card-body {
+        padding: 12px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .admin-card-sku {
+        font-size: 10px;
+        font-weight: 700;
+        color: var(--supermarket-green);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 3px;
+    }
+
+    .admin-card-name {
+        font-weight: 700;
+        font-size: 13px;
+        color: var(--text-main);
+        margin-bottom: 8px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-height: 36px;
+        line-height: 1.4;
+    }
+
+    .admin-card-price-stack {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+        margin-bottom: 12px;
+    }
+
+    .admin-card-price {
+        font-weight: 800;
+        font-size: 14px;
+        color: var(--text-main);
+    }
+
+    .admin-card-mrp {
+        font-size: 11px;
+        color: var(--text-muted);
+        text-decoration: line-through;
+    }
+
+    .action-control-row {
+        display: flex;
+        gap: 6px;
+        margin-top: auto;
+    }
+
+    .btn-action-edit {
+        background: var(--supermarket-green-light);
+        border: 1px solid var(--supermarket-green-border);
+        color: var(--supermarket-green);
+        border-radius: var(--radius-pill);
+        flex: 1;
+        font-size: 12px;
+        padding: 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        transition: all 0.15s ease;
+    }
+
+    .btn-action-edit:hover {
+        background: var(--supermarket-green);
+        color: #ffffff;
+        border-color: var(--supermarket-green);
+    }
+
+    .btn-action-delete {
+        background: #ffffff;
+        border: 1px solid var(--border-flat);
+        color: var(--text-sub);
+        border-radius: var(--radius-pill);
+        flex: 1;
+        font-size: 12px;
+        padding: 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s ease;
+    }
+
+    .btn-action-delete:hover {
+        color: var(--alert-red);
+        background: var(--alert-red-light);
+        border-color: rgba(239, 68, 68, 0.2);
+    }
+
+    .admin-empty-panel {
+        text-align: center;
+        padding: 48px 20px;
+        background: #ffffff;
+        border: 1px solid var(--border-flat);
+        border-radius: var(--radius-box);
+    }
+
+    .admin-empty-circle {
+        width: 52px; height: 52px;
+        background: var(--supermarket-green-light);
+        border: 1px solid var(--supermarket-green-border);
+        color: var(--supermarket-green);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 14px;
+    }
+
+    .btn-admin-add-override {
+        color: #ffffff !important;
+    }
+
+    .skeleton-box {
+        background: linear-gradient(90deg, #f2f6f3 25%, #e8efe9 50%, #f2f6f3 75%);
+        background-size: 200% 100%;
+        animation: loading-pulse 1.5s infinite ease-in-out;
+    }
+
+    @keyframes loading-pulse {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-title-panel">
+    <div>
+        <h2 style="font-weight: 800; font-size: 20px; color: var(--text-main); margin: 0;">Products Database</h2>
+        <p style="margin: 2px 0 0; color: var(--text-muted); font-size: 12.5px;">Manage global catalog definitions, items, and hardware logs.</p>
+    </div>
+    <a href="{{ url_for('admin_add_product') }}" class="btn btn-market-solid btn-admin-add-override" style="display: inline-flex; align-items: center; gap: 4px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Product
+    </a>
+</div>
+
+<div class="admin-search-wrap">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" id="search-input" class="form-control" placeholder="Search by item name or QR assignment...">
+</div>
+
+<div id="products-container">
+    {% if products %}
+    <div class="row g-3" id="products-grid">
+        {% for product in products %}
+        <div class="col-xl-2 col-lg-3 col-md-4 col-6" data-product-card>
+            <div class="admin-inventory-card">
+                <div class="admin-image-viewport">
+                    <img src="{{ product.image }}" class="admin-img" alt="{{ product.name }}"
+                         onerror="this.src='https://placehold.co/400x300/f6f9f6/a1b5a5?text=No+Image'">
+                </div>
+                <div class="admin-card-body">
+                    <div class="admin-card-sku">QR: {{ product.qr_code }}</div>
+                    <p class="admin-card-name" title="{{ product.name }}">{{ product.name }}</p>
+                    <div class="admin-card-price-stack">
+                        <span class="admin-card-price">₹{{ "%.2f"|format(product.price) }}</span>
+                        {% if product.original_price and product.original_price|float > product.price|float %}
+                            <span class="admin-card-mrp">₹{{ "%.2f"|format(product.original_price) }}</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="action-control-row">
+                        <a href="{{ url_for('admin_edit_product', product_id=product._id) }}" class="btn-action-edit" title="Edit Product">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                        </a>
+                        <!-- FIX: Updated onclick to use native JS -->
+                        <button onclick="deleteProduct('{{ product._id }}','{{ product.name.replace("'", "\\'") }}')" class="btn-action-delete" type="button" title="Delete Product">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="admin-empty-panel" id="empty-state">
+        <div class="admin-empty-circle">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+        </div>
+        <h5 style="font-weight: 800; color: var(--text-main); font-size: 15px; margin-bottom: 4px;">No products yet</h5>
+        <p style="color: var(--text-muted); font-size: 12.5px; margin-bottom: 16px;">Add your first inventory unit definition parameters to establish records.</p>
+        <a href="{{ url_for('admin_add_product') }}" class="btn btn-market-solid btn-admin-add-override">Add First Product</a>
+    </div>
+    {% endif %}
+</div>
+
+<div id="skeleton-loader" class="d-none">
+    <div class="row g-3">
+        {% for i in range(6) %}
+        <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+            <div class="admin-inventory-card">
+                <div class="skeleton-box" style="height: 130px; width: 100%;"></div>
+                <div style="padding: 12px; flex: 1;">
+                    <div class="skeleton-box" style="height: 10px; width: 50%; margin-bottom: 8px; border-radius: 4px;"></div>
+                    <div class="skeleton-box" style="height: 12px; width: 85%; margin-bottom: 6px; border-radius: 4px;"></div>
+                    <div class="skeleton-box" style="height: 12px; width: 40%; margin-bottom: 16px; border-radius: 4px;"></div>
+                    <div style="display: flex; gap: 6px;">
+                        <div class="skeleton-box" style="flex: 1; height: 28px; border-radius: var(--radius-pill);"></div>
+                        <div class="skeleton-box" style="flex: 1; height: 28px; border-radius: var(--radius-pill);"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+var searchTimer = null;
+document.getElementById('search-input').addEventListener('input', function () {
+    var q = this.value.trim();
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(function () {
+        if (!q.length) { window.location.reload(); return; }
+        doSearch(q);
+    }, 400);
+});
+
+function doSearch(q) {
+    var g = document.getElementById('products-grid');
+    var e = document.getElementById('empty-state');
+    var s = document.getElementById('skeleton-loader');
+    if (g) g.classList.add('d-none');
+    if (e) e.classList.add('d-none');
+    s.classList.remove('d-none');
+    
+    fetch('/admin/api/products?search=' + encodeURIComponent(q))
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+            s.classList.add('d-none');
+            if (d.success && d.products.length) renderProds(d.products);
+            else showEmptySearch(q);
+        })
+        .catch(function () { 
+            s.classList.add('d-none'); 
+            alert('Search stream connection refused.'); 
+        });
+}
+
+function renderProds(prods) {
+    var c = document.getElementById('products-container');
+    var h = '<div class="row g-3">';
+    prods.forEach(function (p) {
+        let opValue = parseFloat(p.original_price) || parseFloat(p.price);
+        let sellingValue = parseFloat(p.price);
+        let mrpSnippet = '';
+        if (opValue > sellingValue) {
+            mrpSnippet = '<span class="admin-card-mrp">₹' + opValue.toFixed(2) + '</span>';
+        }
+
+        h += '<div class="col-xl-2 col-lg-3 col-md-4 col-6" data-product-card>' +
+            '<div class="admin-inventory-card"><div class="admin-image-viewport">' +
+            '<img src="' + p.image + '" class="admin-img" onerror="this.src=\'https://placehold.co/400x300/f6f9f6/a1b5a5?text=No+Image\'">' +
+            '</div><div class="admin-card-body">' +
+            '<div class="admin-card-sku">QR: ' + p.qr_code + '</div>' +
+            '<p class="admin-card-name" title="' + p.name + '">' + p.name + '</p>' +
+            '<div class="admin-card-price-stack">' +
+            '<span class="admin-card-price">₹' + sellingValue.toFixed(2) + '</span>' + mrpSnippet +
+            '</div>' +
+            '<div class="action-control-row">' +
+            '<a href="/admin/edit_product/' + p._id + '" class="btn-action-edit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></a>' +
+            // FIX: Updated onclick in dynamic HTML generation
+            '<button onclick="deleteProduct(\'' + p._id + '\', \'' + p.name.replace(/'/g, "\\'") + '\')" class="btn-action-delete" type="button"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>' +
+            '</div></div></div></div>';
+    });
+    h += '</div>';
+    c.innerHTML = h;
+}
+
+function showEmptySearch(q) {
+    document.getElementById('products-container').innerHTML = `
+        <div class="admin-empty-panel">
+            <div class="admin-empty-circle" style="color:var(--text-sub); border-color:var(--border-flat);">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </div>
+            <h5 style="font-weight: 800; color: var(--text-main); font-size: 15px; margin-bottom: 4px;">No records found</h5>
+            <p style="color: var(--text-muted); font-size: 12.5px; margin: 0;">We couldn't locate any matching entity logs for "${q}".</p>
+        </div>`;
+}
+
+// FIX: Replaced QtConfirm with standard confirm()
+function deleteProduct(id, name) {
+    if(confirm('Are you sure you want to drop records completely for "' + name + '"?')) {
+        fetch('/admin/delete_product/' + id, { method: 'POST' })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (d.success) {
+                    alert(name + ' completely removed.');
+                    var targetBtn = document.querySelector('[data-product-card] button[onclick*="' + id + '"]');
+                    if (targetBtn) {
+                        var cardElement = targetBtn.closest('[data-product-card]');
+                        if (cardElement) { 
+                            cardElement.style.transition = 'opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s ease'; 
+                            cardElement.style.opacity = '0'; 
+                            cardElement.style.transform = 'scale(0.92)'; 
+                            setTimeout(function () { cardElement.remove(); checkEmpty(); }, 200); 
+                            return; 
+                        }
+                    }
+                    window.location.reload();
+                } else {
+                    alert(d.message || 'Operation mapping refused.');
+                }
+            })
+            .catch(function () { 
+                alert('Network clearance dropped.'); 
+            });
+    }
+}
+
+function checkEmpty() {
+    if (!document.querySelectorAll('[data-product-card]').length) {
+        document.getElementById('products-container').innerHTML = `
+            <div class="admin-empty-panel">
+                <div class="admin-empty-circle">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                </div>
+                <h5 style="font-weight: 800; color: var(--text-main); font-size: 15px; margin-bottom: 4px;">No products yet</h5>
+                <p style="color: var(--text-muted); font-size: 12.5px; margin-bottom: 16px;">Add your first inventory unit definition parameters to establish records.</p>
+                <a href="/admin/add_product" class="btn btn-market-solid btn-admin-add-override">Add First Product</a>
+            </div>`;
+    }
+}
+</script>
+{% endblock %}

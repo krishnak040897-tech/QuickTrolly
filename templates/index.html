@@ -1,0 +1,388 @@
+{% extends "base.html" %}
+
+{% block styles %} 
+<style>
+    /* Clean fluid landing configuration definitions */
+    .landing-hero {
+        padding: 0;
+        width: 100%;
+    }
+
+    .app-promo-banner {
+        background: linear-gradient(135deg, #F2F9F3 0%, #E3F2E5 100%);
+        border-radius: 20px;
+        padding: 20px 40px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        overflow: hidden;
+        position: relative;
+        border: 1px solid var(--supermarket-green-border);
+        margin-bottom: 16px;
+        gap: 24px;
+    }
+
+    .banner-text-side {
+        max-width: 100%;
+        z-index: 2;
+    }
+
+    .banner-image-side {
+        z-index: 2;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .banner-image-side img {
+        max-width: 100%;
+        max-height: 180px;
+        width: auto;
+        height: auto;
+        border-radius: 12px;
+        object-fit: contain;
+    }
+
+    /* New bottom layout adjustments for the mobile image insertion */
+    .cta-image-wrapper {
+        margin-top: 24px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .cta-image-wrapper img {
+        max-width: 85%;
+        height: auto;
+        border-radius: 12px;
+        object-fit: contain;
+    }
+
+    .app-badge-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--supermarket-green);
+        color: #ffffff;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 5px 12px;
+        border-radius: var(--radius-pill);
+        margin-bottom: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .hero-headline {
+        font-size: 32px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        line-height: 1.2;
+        color: var(--text-main);
+        margin-bottom: 10px;
+    }
+
+    .hero-headline span.highlight {
+        color: var(--supermarket-green-dark);
+        background: rgba(12, 131, 31, 0.08);
+        padding: 2px 10px;
+        border-radius: var(--radius-pill);
+    }
+
+    .hero-sub {
+        font-size: 13.5px;
+        color: var(--text-muted);
+        line-height: 1.5;
+        margin-bottom: 18px;
+        max-width: 580px;
+    }
+
+    .hero-btns {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .btn-app-solid {
+        background: var(--supermarket-green);
+        color: #ffffff;
+        border: none;
+        border-radius: var(--radius-pill);
+        padding: 11px 26px;
+        font-size: 13px;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: transform 0.15s ease, background-color 0.15s ease;
+    }
+
+    .btn-app-solid:hover {
+        background: var(--supermarket-green-dark);
+        transform: translateY(-1px);
+    }
+
+    .btn-app-outline {
+        background: #ffffff;
+        color: var(--supermarket-green);
+        border: 1px solid var(--supermarket-green-border);
+        border-radius: var(--radius-pill);
+        padding: 11px 26px;
+        font-size: 13px;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: background-color 0.15s ease;
+    }
+
+    .btn-app-outline:hover {
+        background: var(--supermarket-green-light);
+    }
+
+    .banner-graphic-accent {
+        position: absolute;
+        right: -20px;
+        top: -20px;
+        width: 140px;
+        height: 140px;
+        background: radial-gradient(circle, rgba(12, 131, 31, 0.12) 0%, transparent 70%);
+        border-radius: 50%;
+    }
+
+    .features-section, .steps-section {
+        padding: 12px 0 20px 0;
+        width: 100%;
+    }
+
+    .section-header { margin-bottom: 14px; }
+    .section-label { font-size: 10px; font-weight: 700; color: var(--supermarket-green); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 2px; }
+    .section-title { font-size: 20px; font-weight: 800; color: var(--text-main); letter-spacing: -0.02em; }
+
+    .features-grid, .steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+
+    .feature-card, .step-card {
+        padding: 20px;
+        border-radius: 20px;
+        border: 1px solid var(--border-flat);
+        background: var(--canvas-white);
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        transition: all 0.2s ease;
+    }
+
+    .feature-card:hover, .step-card:hover {
+        border-color: var(--supermarket-green);
+        box-shadow: 0 6px 20px rgba(12, 131, 31, 0.04) !important;
+    }
+
+    .icon-wrapper {
+        width: 42px; height: 42px;
+        border-radius: 50%;
+        background: var(--supermarket-green-light);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        color: var(--supermarket-green);
+        border: 1px solid var(--supermarket-green-border);
+    }
+
+    .icon-wrapper.green-step-variant {
+        background: var(--supermarket-green);
+        color: #ffffff;
+        font-size: 14px;
+        font-weight: 700;
+        border: none;
+    }
+
+    .icon-wrapper svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2.5; }
+
+    .card-content { display: flex; flex-direction: column; overflow: hidden; flex: 1; }
+    .card-name { font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 2px; }
+    .card-desc { font-size: 12px; color: var(--text-muted); }
+
+    .bottom-cta { padding: 40px 0; text-align: center; }
+    .bottom-cta-title { font-size: 22px; font-weight: 800; color: var(--text-main); letter-spacing: -0.02em; margin-bottom: 14px; }
+
+    /* Responsive Visibility Utilities */
+    .desktop-only { display: none !important; }
+    .mobile-only { display: block !important; }
+
+    @media (max-width: 768px) {
+        .app-promo-banner { padding: 16px 20px; }
+        .hero-headline { font-size: 24px; }
+        .features-grid, .steps-grid { grid-template-columns: 1fr; gap: 12px; }
+        .feature-card, .step-card { padding: 16px; }
+        .mobile-only { display: block !important; }
+        .mobile-only-flex { display: flex !important; }
+    }
+
+    @media (min-width: 769px) {
+        .banner-text-side { max-width: 60%; }
+        .desktop-only { display: flex !important; max-width: 35%; }
+        .mobile-only, .mobile-only-flex { display: none !important; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="landing-hero">
+    <div class="app-promo-banner">
+        <div class="banner-text-side">
+            <div class="app-badge-pill">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></polygon></svg>
+                Instant Engine
+            </div>
+            <h1 class="hero-headline">
+                Skip queues. <span class="highlight">Scan & go.</span>
+            </h1>
+            <p class="hero-sub">
+                No checkout terminal lines. Point your camera at any item barcode to instantly settle your billing list and leave.
+            </p>
+            <div class="hero-btns">
+                {% if session.get('user_id') %}
+                    {% if session.get('role') == 'admin' %}
+                        <a href="{{ url_for('admin_dashboard') }}" class="btn-app-solid">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                            Dashboard
+                        </a>
+                        <a href="{{ url_for('scanner') }}" class="btn-app-outline">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 7V4a2 2 0 0 1 2-2h3"></path><path d="M15 2h3a2 2 0 0 1 2 2v3"></path><path d="M20 17v3a2 2 0 0 1-2 2h-3"></path><path d="M7 22H4a2 2 0 0 1-2-2v-3"></path><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                            Scanner
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('scanner') }}" class="btn-app-solid">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 7V4a2 2 0 0 1 2-2h3"></path><path d="M15 2h3a2 2 0 0 1 2 2v3"></path><path d="M20 17v3a2 2 0 0 1-2 2h-3"></path><path d="M7 22H4a2 2 0 0 1-2-2v-3"></path><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                            Launch Scanner
+                        </a>
+                        <a href="{{ url_for('cart') }}" class="btn-app-outline">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                            Trolley
+                            <span class="trolley-floating-badge" id="cart-badge-hero" style="position: relative; top: -2px; background: var(--alert-red); color: #fff; font-size: 9px; font-weight: 800; min-width: 16px; height: 16px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; border: 1.5px solid #fff; margin-left: 2px;">0</span>
+                        </a>
+                    {% endif %}
+                {% else %}
+                    <a href="{{ url_for('signup') }}" class="btn-app-solid">Get Started Now</a>
+                    <a href="{{ url_for('login') }}" class="btn-app-outline">Sign In</a>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="banner-image-side desktop-only">
+            <a href="https://ibb.co/ddKnvzy" target="_blank">
+                <img src="https://i.ibb.co/t7Cy6W5/image.png" alt="Instant Engine App Showcase" border="0">
+            </a>
+        </div>
+        
+        <div class="banner-graphic-accent"></div>
+    </div>
+</section>
+
+<section class="features-section">
+    <div class="section-header">
+        <div class="section-label">Core Capabilities</div>
+        <h2 class="section-title">Built for instant scanning</h2>
+    </div>
+
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="icon-wrapper">
+                <svg viewBox="0 0 24 24"><path d="M4 7V4a2 2 0 0 1 2-2h3"/><path d="M15 2h3a2 2 0 0 1 2 2v3"/><path d="M20 17v3a2 2 0 0 1-2 2h-3"/><path d="M7 22H4a2 2 0 0 1-2-2v-3"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            </div>
+            <div class="card-content">
+                <div class="card-name">Instant Barcode Scan</div>
+                <div class="card-desc">Point your phone at any product label.</div>
+            </div>
+        </div>
+
+        <div class="feature-card">
+            <div class="icon-wrapper">
+                <svg viewBox="0 0 24 24"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
+            </div>
+            <div class="card-content">
+                <div class="card-name">Live Price Totals</div>
+                <div class="card-desc">Tax and totals refresh immediately.</div>
+            </div>
+        </div>
+
+        <div class="feature-card">
+            <div class="icon-wrapper">
+                <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+            <div class="card-content">
+                <div class="card-name">PDF Receipt Download</div>
+                <div class="card-desc">Itemized proofs stored on your device.</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="steps-section">
+    <div class="section-header">
+        <div class="section-label">How It Works</div>
+        <h2 class="section-title">Three fast milestones</h2>
+    </div>
+
+    <div class="steps-grid">
+        <div class="step-card">
+            <div class="icon-wrapper green-step-variant">1</div>
+            <div class="card-content">
+                <div class="card-name">Scan items</div>
+                <div class="card-desc">Recognize items seamlessly via camera feed.</div>
+            </div>
+        </div>
+
+        <div class="step-card">
+            <div class="icon-wrapper green-step-variant">2</div>
+            <div class="card-content">
+                <div class="card-name">Review trolley</div>
+                <div class="card-desc">Adjust quantities directly inside your app.</div>
+            </div>
+        </div>
+
+        <div class="step-card">
+            <div class="icon-wrapper green-step-variant">3</div>
+            <div class="card-content">
+                <div class="card-name">Pay and leave</div>
+                <div class="card-desc">Complete digital billing securely and skip lines.</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="bottom-cta">
+    <h2 class="bottom-cta-title">Ready to skip retail queues?</h2>
+    {% if not session.get('user_id') %}
+        <a href="{{ url_for('signup') }}" class="btn-app-solid">Create Account</a>
+        <a href="{{ url_for('login') }}" class="btn-app-outline" style="margin-left: 10px;">Sign In</a>
+    {% elif session.get('role') != 'admin' %}
+        <a href="{{ url_for('scanner') }}" class="btn-app-solid">Launch Live Scanner</a>
+    {% else %}
+        <a href="{{ url_for('admin_dashboard') }}" class="btn-app-solid">Go to Dashboard</a>
+    {% endif %}
+
+    <div class="cta-image-wrapper mobile-only-flex" style="display: none;">
+        <a href="https://ibb.co/ddKnvzy" target="_blank">
+            <img src="https://i.ibb.co/t7Cy6W5/image.png" alt="Instant Engine App Showcase" border="0">
+        </a>
+    </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if ("{{ session.get('user_id') }}") {
+        fetch('/api/cart')
+            .then(res => res.json())
+            .then(data => {
+                var itemsCount = 0;
+                if (data.success && data.cart) {
+                    data.cart.forEach(el => { itemsCount += (el.qty || 1); });
+                }
+                var badge = document.getElementById('cart-badge-hero');
+                if (badge) badge.innerText = itemsCount;
+            });
+    }
+});
+</script>
+{% endblock %}

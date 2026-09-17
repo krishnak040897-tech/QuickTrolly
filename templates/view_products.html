@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<style>
+    .products-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .product-search {
+        position: relative;
+        width: 100%;
+        max-width: 320px;
+    }
+
+    .product-search svg {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-muted);
+        pointer-events: none;
+    }
+
+    .product-search input {
+        padding-left: 38px;
+        border-radius: var(--radius-pill) !important;
+        border: 1px solid var(--border-flat) !important;
+        height: 38px;
+        font-size: 13px;
+    }
+
+    .product-search input:focus {
+        border-color: var(--supermarket-green) !important;
+        box-shadow: none !important;
+    }
+
+    .catalog-shelf-card {
+        background: #ffffff;
+        border: 1px solid var(--border-flat);
+        border-radius: var(--radius-box);
+        overflow: hidden;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .catalog-shelf-card:hover {
+        border-color: var(--supermarket-green);
+        box-shadow: 0 6px 20px rgba(12, 131, 31, 0.04) !important;
+    }
+
+    .catalog-image-viewport {
+        position: relative;
+        background: var(--aisle-gray);
+        border-bottom: 1px solid var(--border-flat);
+        height: 140px;
+        width: 100%;
+        overflow: hidden;
+    }
+
+    .catalog-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .catalog-card-badge {
+        position: absolute;
+        bottom: 8px;
+        left: 8px;
+        background: rgba(9, 38, 14, 0.75);
+        color: #ffffff;
+        font-size: 9.5px;
+        font-weight: 700;
+        padding: 3px 8px;
+        border-radius: var(--radius-pill);
+        backdrop-filter: blur(4px);
+    }
+
+    .catalog-discount-badge {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: #24b243;
+        color: #ffffff;
+        font-size: 9px;
+        font-weight: 800;
+        padding: 2px 7px;
+        border-radius: 6px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .catalog-body-panel {
+        padding: 12px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .catalog-item-name {
+        font-weight: 700;
+        font-size: 13px;
+        color: var(--text-main);
+        margin-bottom: 8px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-height: 38px;
+        line-height: 1.4;
+    }
+
+    .catalog-footer-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: auto;
+    }
+
+    .catalog-price-container {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .catalog-item-price {
+        font-weight: 800;
+        font-size: 14px;
+        color: var(--text-main);
+        line-height: 1.1;
+    }
+
+    .catalog-item-mrp {
+        font-size: 11px;
+        color: var(--text-muted);
+        text-decoration: line-through;
+    }
+
+    .catalog-view-btn {
+        background: var(--supermarket-green-light);
+        border: 1px solid var(--supermarket-green-border);
+        color: var(--supermarket-green);
+        font-weight: 700;
+        font-size: 11.5px;
+        padding: 4px 14px;
+        border-radius: var(--radius-pill);
+        transition: all 0.15s ease;
+    }
+
+    .catalog-shelf-card:hover .catalog-view-btn {
+        background: var(--supermarket-green);
+        color: #ffffff;
+        border-color: var(--supermarket-green);
+    }
+
+    .catalog-empty-state {
+        text-align: center;
+        padding: 48px 20px;
+        background: #ffffff;
+        border: 1px solid var(--border-flat);
+        border-radius: var(--radius-box);
+    }
+
+    .catalog-empty-circle {
+        width: 52px; height: 52px;
+        background: var(--supermarket-green-light);
+        border: 1px solid var(--supermarket-green-border);
+        color: var(--supermarket-green);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 12px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="products-header">
+    <div>
+        <h2 style="font-weight: 800; font-size: 20px; color: var(--text-main); margin: 0 0 2px;">Browse Products</h2>
+        <p style="margin: 0; color: var(--text-muted); font-size: 13px;">Explore our full range of grocery items.</p>
+    </div>
+    <div class="product-search">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="catalog-search" class="form-control" placeholder="Search item name or SKU code...">
+    </div>
+</div>
+
+<div class="row g-3" id="products-grid">
+    {% for product in products %}
+    <div class="col-xl-2 col-lg-3 col-md-4 col-6" data-product-card>
+        <a href="{{ url_for('product_details', product_id=product._id) }}" style="text-decoration: none; color: inherit; display: block; height: 100%;">
+            <div class="catalog-shelf-card">
+                <div class="catalog-image-viewport">
+                    <img src="{{ product.image }}" class="catalog-img" alt="{{ product.name }}"
+                         onerror="this.src='https://placehold.co/400x300/f6f9f6/a1b5a5?text=No+Image'">
+                    <div class="catalog-card-badge">QR: {{ product.qr_code }}</div>
+                    
+                    {% if product.original_price and product.original_price|float > product.price|float %}
+                        {% set discount_pct = (((product.original_price|float - product.price|float) / product.original_price|float) * 100)|round|int %}
+                        <div class="catalog-discount-badge">{{ discount_pct }}% OFF</div>
+                    {% endif %}
+                </div>
+                <div class="catalog-body-panel">
+                    <p class="catalog-item-name" title="{{ product.name }}">{{ product.name }}</p>
+                    <div class="catalog-footer-row">
+                        <div class="catalog-price-container">
+                            <span class="catalog-item-price">₹{{ "%.2f"|format(product.price) }}</span>
+                            {% if product.original_price and product.original_price|float > product.price|float %}
+                                <span class="catalog-item-mrp">₹{{ "%.2f"|format(product.original_price) }}</span>
+                            {% endif %}
+                        </div>
+                        <button class="catalog-view-btn" type="button" style="pointer-events: none;">
+                            View
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+    {% else %}
+    <div class="col-12" id="empty-state-fallback">
+        <div class="catalog-empty-state">
+            <div class="catalog-empty-circle">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+            </div>
+            <h5 style="font-weight: 800; color: var(--text-main); font-size: 15px; margin-bottom: 4px;">No products available</h5>
+            <p style="color: var(--text-muted); font-size: 12.5px; margin: 0;">Please check back later or contact the admin team.</p>
+        </div>
+    </div>
+    {% endfor %}
+    
+    <div class="col-12 d-none" id="no-results-fallback">
+        <div class="catalog-empty-state">
+            <div class="catalog-empty-circle" style="color: var(--alert-red); background: var(--alert-red-light); border-color: rgba(239, 68, 68, 0.15);">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="8" x2="14" y2="14"/></svg>
+            </div>
+            <h5 style="font-weight: 800; color: var(--text-main); font-size: 15px; margin-bottom: 4px;">No match found</h5>
+            <p style="color: var(--text-muted); font-size: 12.5px; margin: 0;">We couldn't find any cataloged items matching that search criteria.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById('catalog-search').addEventListener('input', function(e) {
+        const term = e.target.value.toLowerCase().trim();
+        const cards = document.querySelectorAll('[data-product-card]');
+        let visibleCount = 0;
+
+        cards.forEach(card => {
+            const name = card.querySelector('.catalog-item-name').innerText.toLowerCase();
+            const qr = card.querySelector('.catalog-card-badge').innerText.toLowerCase();
+            
+            if (name.includes(term) || qr.includes(term)) {
+                card.classList.remove('d-none');
+                visibleCount++;
+            } else {
+                card.classList.add('d-none');
+            }
+        });
+
+        const fallback = document.getElementById('no-results-fallback');
+        if (fallback) {
+            if (visibleCount === 0 && cards.length > 0) {
+                fallback.classList.remove('d-none');
+            } else {
+                fallback.classList.add('d-none');
+            }
+        }
+    });
+</script>
+{% endblock %}

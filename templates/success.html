@@ -1,0 +1,639 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<style>
+    .receipt-card {
+        max-width: 520px;
+        margin: 40px auto;
+        background: #ffffff;
+        border: 1px solid var(--border-flat);
+        border-radius: var(--radius-box);
+        overflow: hidden;
+    }
+
+    .receipt-header {
+        text-align: center;
+        padding: 32px 24px 28px;
+        background: var(--supermarket-green-light);
+        border-bottom: 2px dashed var(--border-flat);
+    }
+
+    .receipt-icon {
+        width: 64px;
+        height: 64px;
+        background: var(--supermarket-green);
+        color: #ffffff;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 14px;
+    }
+
+    .receipt-body {
+        padding: 24px;
+    }
+
+    .receipt-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 10px;
+        font-size: 13px;
+    }
+    .receipt-label {
+        color: var(--text-muted);
+        font-weight: 500;
+    }
+    .receipt-value {
+        font-weight: 700;
+        color: var(--text-main);
+        text-align: right;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 12px;
+        word-break: break-all;
+    }
+
+    .receipt-divider {
+        height: 0;
+        border: 0;
+        border-bottom: 1px dashed var(--border-flat);
+        margin: 18px 0;
+    }
+
+    .receipt-total {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 12px;
+        font-size: 18px;
+        font-weight: 800;
+        color: var(--supermarket-green);
+    }
+
+    .receipt-items-scroll {
+        max-height: 150px;
+        overflow-y: auto;
+        margin-bottom: 18px;
+        border: 1px solid var(--border-flat);
+        border-radius: 12px;
+        padding: 10px 12px;
+        background: var(--aisle-gray);
+    }
+    .receipt-items-scroll::-webkit-scrollbar {
+        width: 4px;
+    }
+    .receipt-items-scroll::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .receipt-items-scroll::-webkit-scrollbar-thumb {
+        background: var(--border-flat);
+        border-radius: 4px;
+    }
+
+    .receipt-item-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 7px;
+        font-size: 12.5px;
+    }
+    .receipt-item-row:last-child {
+        margin-bottom: 0;
+    }
+    .receipt-item-name {
+        color: var(--text-main);
+        font-weight: 500;
+    }
+    .receipt-item-qty {
+        color: var(--text-sub);
+        font-weight: 600;
+    }
+    .receipt-item-price {
+        font-weight: 700;
+        color: var(--text-main);
+        white-space: nowrap;
+    }
+
+    .btn-receipt-primary {
+        width: 100%;
+        height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        border-radius: var(--radius-pill);
+        font-size: 13px;
+        font-weight: 700;
+        color: #ffffff;
+        background: var(--supermarket-green);
+        border: 1.5px solid var(--supermarket-green);
+        cursor: pointer;
+        transition: all 0.15s ease;
+        white-space: nowrap;
+        padding: 0 20px;
+    }
+    .btn-receipt-primary:hover {
+        background: var(--supermarket-green-dark);
+        border-color: var(--supermarket-green-dark);
+    }
+    .btn-receipt-primary:active {
+        transform: scale(0.985);
+    }
+    .btn-receipt-primary:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+    .btn-receipt-primary svg {
+        flex-shrink: 0;
+    }
+
+    .email-invoice-section {
+        background: var(--aisle-gray);
+        padding: 14px;
+        border-radius: 14px;
+        border: 1px solid var(--border-flat);
+        margin-top: 14px;
+    }
+    .email-invoice-label {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 8px;
+        display: block;
+    }
+    .email-invoice-row {
+        display: flex;
+        gap: 8px;
+        width: 100%;
+    }
+    .email-invoice-input {
+        flex: 1;
+        border-radius: var(--radius-pill) !important;
+        border: 1px solid var(--border-flat) !important;
+        height: 40px;
+        font-size: 13px;
+        padding: 0 16px;
+        background: #ffffff !important;
+    }
+    .email-invoice-input:focus {
+        border-color: var(--supermarket-green) !important;
+        box-shadow: none !important;
+    }
+
+    .btn-receipt-send {
+        flex: 0 0 auto;
+        min-width: 90px;
+        height: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        border-radius: var(--radius-pill);
+        font-size: 13px;
+        font-weight: 700;
+        color: #ffffff;
+        background: var(--supermarket-green);
+        border: 1.5px solid var(--supermarket-green);
+        cursor: pointer;
+        transition: all 0.15s ease;
+        white-space: nowrap;
+        padding: 0 14px;
+    }
+    .btn-receipt-send:hover {
+        background: var(--supermarket-green-dark);
+        border-color: var(--supermarket-green-dark);
+    }
+    .btn-receipt-send:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+    .btn-receipt-send svg {
+        flex-shrink: 0;
+    }
+
+    .receipt-scan-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        color: var(--supermarket-green);
+        font-weight: 700;
+        text-decoration: none;
+        font-size: 13px;
+        transition: opacity 0.15s ease;
+    }
+    .receipt-scan-link:hover {
+        opacity: 0.75;
+    }
+
+    .receipt-error-state {
+        text-align: center;
+        padding: 30px 20px;
+        color: var(--text-muted);
+    }
+    .receipt-error-icon {
+        width: 56px;
+        height: 56px;
+        background: #fce8ea;
+        border: 1px solid #e8606d;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 14px;
+        color: var(--alert-red);
+    }
+
+    .btn-receipt-outline {
+        height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        border-radius: var(--radius-pill);
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-muted);
+        background: #ffffff;
+        border: 1px solid var(--border-flat);
+        cursor: pointer;
+        transition: all 0.15s ease;
+        white-space: nowrap;
+        padding: 0 20px;
+        text-decoration: none;
+    }
+    .btn-receipt-outline:hover {
+        background: var(--aisle-gray);
+        border-color: var(--text-muted);
+        color: var(--text-main);
+    }
+
+    @media (max-width: 575px) {
+        .receipt-card { margin: 20px auto; }
+        .receipt-header { padding: 24px 18px 22px; }
+        .receipt-body { padding: 18px; }
+        .receipt-icon { width: 56px; height: 56px; }
+        .email-invoice-row { gap: 6px; }
+        .email-invoice-input { padding: 0 12px; font-size: 12.5px; }
+        .btn-receipt-send { min-width: 75px; padding: 0 10px; font-size: 12.5px; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="receipt-card">
+    <div class="receipt-header">
+        <div class="receipt-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        </div>
+        <h2 style="font-size: 22px; font-weight: 800; margin: 0 0 4px; color: var(--text-main);">Payment Successful</h2>
+        <p style="margin: 0; color: var(--text-muted); font-size: 13px; font-weight: 500;">Your smart trolley order has been processed.</p>
+    </div>
+
+    <div class="receipt-body">
+        {% if order %}
+        <div class="receipt-row">
+            <span class="receipt-label">Order ID</span>
+            <span class="receipt-value">{{ order._id }}</span>
+        </div>
+        <div class="receipt-row">
+            <span class="receipt-label">Transaction ID</span>
+            <span class="receipt-value">{{ order.payment_id or 'N/A' }}</span>
+        </div>
+        <div class="receipt-row">
+            <span class="receipt-label">Date</span>
+            <span class="receipt-value" style="font-family: inherit; font-size: 13px;">{{ order.date }}</span>
+        </div>
+
+        <div class="receipt-divider"></div>
+
+        <div class="receipt-items-scroll">
+            {% if order.products %}
+                {% for item in order.products %}
+                <div class="receipt-item-row">
+                    <span>
+                        <span class="receipt-item-name">{{ item.name|default('Product') }}</span>
+                        <span class="receipt-item-qty"> x{{ item.qty|default(1) }}</span>
+                    </span>
+                    <span class="receipt-item-price">₹{{ (item.price * item.qty)|round(2) }}</span>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div style="text-align:center; color:var(--text-sub); font-size:12px; padding:8px 0;">No item details found.</div>
+            {% endif %}
+        </div>
+
+        <div class="receipt-total">
+            <span>Total Paid</span>
+            <span>₹{{ order.total|round(2) }}</span>
+        </div>
+
+        <div style="margin-top: 22px; display: flex; flex-direction: column; gap: 0;">
+            <button id="download-invoice-btn" class="btn-receipt-primary" type="button">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                <span id="pdf-btn-text">Download Tax Invoice</span>
+            </button>
+
+            <div class="email-invoice-section">
+                <label class="email-invoice-label">Email Invoice To</label>
+                <div class="email-invoice-row">
+                    <input type="email" id="email-invoice-input" class="form-control email-invoice-input" placeholder="Enter email address" value="{{ order.email or '' }}">
+                    <button id="send-email-btn" class="btn-receipt-send" type="button">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                        <span id="send-btn-text">Send</span>
+                    </button>
+                </div>
+            </div>
+
+            <div style="margin-top: 18px; text-align: center;">
+                <a href="{{ url_for('scanner') }}" class="receipt-scan-link">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                    Scan New Items
+                </a>
+            </div>
+        </div>
+
+        <script type="application/json" id="order-data">
+            {{ order | tojson | safe }}
+        </script>
+
+        {% else %}
+        <div class="receipt-error-state">
+            <div class="receipt-error-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <div style="font-size: 15px; font-weight: 700; color: var(--text-main); margin-bottom: 4px;">Order details could not be loaded</div>
+            <div style="font-size: 12px; margin-bottom: 16px;">Something went wrong while retrieving your receipt.</div>
+            <a href="{{ url_for('scanner') }}" class="btn-receipt-outline">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                Return to Scanner
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- CDN của thư viện tạo PDF jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if(window.QtToast) window.QtToast.show('Payment successful! Order confirmed.', 'success');
+
+    // Khởi tạo hàm xuất hóa đơn PDF chuyên nghiệp sử dụng thư viện jsPDF cục bộ
+    window.generateInvoice = function(order) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+        
+        // Thiết kế Header
+        doc.setFillColor(12, 131, 31); // Màu Supermarket Green của hệ thống
+        doc.rect(0, 0, 210, 40, 'F');
+        
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('Helvetica', 'bold');
+        doc.setFontSize(22);
+        doc.text("QuickTrolly Self-Checkout", 14, 18);
+        
+        doc.setFont('Helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.text("Official Digital Invoice & Retail Settlement Receipt", 14, 26);
+        doc.text("Date: " + order.date, 14, 32);
+
+        // Thông tin đơn hàng
+        doc.setTextColor(50, 50, 50);
+        doc.setFont('Helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.text("BILL TO:", 14, 52);
+        doc.setFont('Helvetica', 'normal');
+        doc.text("Customer: " + (order.customer_name || "Valued Shopper"), 14, 58);
+        doc.text("Phone: +91 " + (order.phone || "N/A"), 14, 64);
+        if(order.address) doc.text("Address: " + order.address, 14, 70);
+
+        doc.setFont('Helvetica', 'bold');
+        doc.text("METRICS REGISTRY:", 130, 52);
+        doc.setFont('Helvetica', 'normal');
+        doc.text("Order ID: #" + order._id, 130, 58);
+        doc.text("Gateway Ref: " + (order.payment_id || "Direct"), 130, 64);
+        doc.text("Status: Paid / Settled", 130, 70);
+
+        // Bảng danh sách sản phẩm
+        let y = 85;
+        doc.setFillColor(240, 240, 240);
+        doc.rect(14, y, 182, 8, 'F');
+        doc.setFont('Helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.text("Catalog Item Label Description", 16, y + 5);
+        doc.text("Qty", 125, y + 5);
+        doc.text("Unit Price", 145, y + 5);
+        doc.text("Total", 175, y + 5);
+        
+        doc.setFont('Helvetica', 'normal');
+        y += 8;
+        
+        let subtotalAccumulator = 0;
+        if(order.products && order.products.length) {
+            order.products.forEach(item => {
+                y += 8;
+                // Kiểm tra trang mới nếu danh sách quá dài
+                if (y > 270) { doc.addPage(); y = 20; }
+                
+                let qty = item.qty || 1;
+                let price = parseFloat(item.price) || 0;
+                let itemTotal = price * qty;
+                subtotalAccumulator += itemTotal;
+                
+                doc.text(item.name || "Product", 16, y);
+                doc.text(qty.toString(), 126, y);
+                doc.text("Rs. " + price.toFixed(2), 145, y);
+                doc.text("Rs. " + itemTotal.toFixed(2), 175, y);
+                
+                // Vẽ viền gạch đứt nhẹ
+                doc.setDrawColor(220, 220, 220);
+                doc.line(14, y + 3, 196, y + 3);
+            });
+        }
+
+        // Tính toán khối tổng kết tài chính ở chân trang
+        y += 15;
+        doc.setFont('Helvetica', 'bold');
+        doc.text("Subtotal:", 130, y);
+        doc.setFont('Helvetica', 'normal');
+        doc.text("Rs. " + subtotalAccumulator.toFixed(2), 175, y);
+        
+        y += 6;
+        doc.setFont('Helvetica', 'bold');
+        doc.text("Convenience Fee:", 130, y);
+        doc.setFont('Helvetica', 'normal');
+        doc.text("FREE", 175, y);
+        
+        y += 8;
+        doc.setFillColor(228, 248, 234);
+        doc.rect(128, y - 5, 68, 8, 'F');
+        doc.setTextColor(12, 131, 31);
+        doc.setFont('Helvetica', 'bold');
+        doc.setFontSize(12);
+        doc.text("Total Paid:", 130, y + 1);
+        doc.text("Rs. " + parseFloat(order.total).toFixed(2), 175, y + 1);
+
+        // Footer ghi chú bảo mật
+        doc.setTextColor(150, 150, 150);
+        doc.setFont('Helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.text("Thank you for shopping with QuickTrolly Security System Framework.", 14, 285);
+
+        // Xuất file tải xuống máy trạm
+        doc.save("QuickTrolly_Invoice_" + order._id + ".pdf");
+    };
+
+    var btnPdf = document.getElementById('download-invoice-btn');
+    if (btnPdf) {
+        btnPdf.addEventListener('click', function() {
+            try {
+                var rawData = document.getElementById('order-data').textContent;
+                var orderData = JSON.parse(rawData);
+                if (window.generateInvoice) {
+                    window.generateInvoice(orderData);
+                    if(window.QtToast) window.QtToast.show('Tax invoice generated successfully!', 'success');
+                } else {
+                    if(window.QtToast) window.QtToast.show('Invoice generator engine not initialized.', 'error');
+                }
+            } catch (e) {
+                console.error('Invoice Error:', e);
+                if(window.QtToast) window.QtToast.show('Could not process PDF matrix.', 'error');
+            }
+        });
+    }
+
+    function validateEmail(email) {
+        var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
+
+    function sendEmailNotification(receiptData) {
+        var customer = receiptData.customer;
+        var items = receiptData.items;
+        var btn = document.getElementById('send-email-btn');
+        var btnText = document.getElementById('send-btn-text');
+
+        btn.disabled = true;
+        btnText.innerText = '...';
+
+        var itemsList = items.map(function(item) {
+            return item.name + ' x ' + item.quantity + ' - \u20B9' + (item.price * item.quantity).toFixed(2);
+        }).join('\n');
+
+        var messageText = 
+            '===================================================================\n' +
+            '                     INVOICE NOTIFICATION\n' +
+            '===================================================================\n\n' +
+            'Dear ' + (customer.name || 'Valued Customer') + ',\n\n' +
+            'Thank you for your purchase! Here is your invoice:\n\n' +
+            'INVOICE DETAILS:\n' +
+            'Receipt Number: ' + receiptData.receiptNumber + '\n' +
+            'Transaction ID: ' + receiptData.transactionId + '\n' +
+            'Date: ' + receiptData.date + '\n\n' +
+            'ITEMS PURCHASED:\n' +
+            itemsList + '\n\n' +
+            'SUBTOTAL: \u20B9' + receiptData.subtotal.toFixed(2) + '\n' +
+            'TAXES: \u20B9' + receiptData.taxes.toFixed(2) + '\n' +
+            'TOTAL: \u20B9' + receiptData.total.toFixed(2) + '\n\n' +
+            'Payment Method: ' + receiptData.paymentMethod + '\n' +
+            'Status: Completed\n\n' +
+            'Customer Information:\n' +
+            'Name: ' + customer.name + '\n' +
+            (customer.email ? 'Email: ' + customer.email + '\n' : '') +
+            (customer.phone ? 'Phone: ' + customer.phone + '\n' : '') +
+            '\n===================================================================\n' +
+            'Thank you for shopping with us!\n' +
+            'Best regards,\n' +
+            'QuickTrolly Team\n' +
+            '===================================================================';
+
+        var formData = new FormData();
+        formData.append('access_key', '74773498-d75d-4ec7-8fb3-83e2a1450b6c');
+        formData.append('name', customer.name || 'Valued Customer');
+        formData.append('email', customer.email || '');
+        formData.append('subject', 'Invoice #' + receiptData.receiptNumber);
+        formData.append('message', messageText.trim());
+        formData.append('botcheck', '');
+
+        fetch('https://api.web3forms.com/submit', {
+            method: 'POST',
+            body: formData
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            if (data.success) {
+                if(window.QtToast) window.QtToast.show('Invoice sent to your email!', 'success');
+            } else {
+                if(window.QtToast) window.QtToast.show('Failed to send email. Try again.', 'error');
+            }
+        })
+        .catch(function(error) {
+            if(window.QtToast) window.QtToast.show('Error sending email. Check connection.', 'error');
+        })
+        .finally(function() {
+            btn.disabled = false;
+            btnText.innerText = 'Send';
+        });
+    }
+
+    var emailBtn = document.getElementById('send-email-btn');
+    if (emailBtn) {
+        emailBtn.addEventListener('click', function() {
+            var rawDataEl = document.getElementById('order-data');
+            if (!rawDataEl) return;
+            var rawData = rawDataEl.textContent;
+            if (!rawData) return;
+
+            var order = JSON.parse(rawData);
+
+            var emailInput = document.getElementById('email-invoice-input');
+            var destEmail = emailInput.value.trim();
+
+            if (!destEmail) {
+                if(window.QtToast) window.QtToast.show('Please enter an email address.', 'warning');
+                emailInput.focus();
+                return;
+            }
+            if (!validateEmail(destEmail)) {
+                if(window.QtToast) window.QtToast.show('Invalid email address.', 'error');
+                return;
+            }
+
+            var subtotal = 0;
+            order.products.forEach(function(p) { subtotal += (p.price * p.qty); });
+            var tax = order.total - subtotal;
+
+            var receiptData = {
+                receiptNumber: order._id,
+                transactionId: order.payment_id || 'N/A',
+                date: order.date,
+                customer: {
+                    name: order.customer_name,
+                    email: destEmail,
+                    phone: order.phone
+                },
+                items: order.products.map(function(p) {
+                    return {
+                        name: p.name,
+                        quantity: p.qty,
+                        price: p.price
+                    };
+                }),
+                subtotal: subtotal,
+                taxes: tax > 0 ? tax : 0,
+                total: order.total,
+                paymentMethod: 'Razorpay / Online Payment'
+            };
+
+            sendEmailNotification(receiptData);
+        });
+    }
+});
+</script>
+{% endblock %}

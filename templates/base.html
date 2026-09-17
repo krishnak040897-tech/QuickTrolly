@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"> 
+    <title>QuickTrolly – Supermarket Self-Checkout Engine</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <style>
+        :root {
+            --supermarket-green: #0C831F;
+            --supermarket-green-dark: #075E14;
+            --supermarket-green-light: #F2F9F3;
+            --supermarket-green-border: rgba(12, 131, 31, 0.15);
+            --alert-red: #ef4444;
+            --alert-red-light: #fef2f2;
+            --canvas-white: #ffffff;
+            --aisle-gray: #f6f9f6;
+            --border-flat: #e2ebe3;
+            --border-focus: #0C831F;
+            --text-main: #09260E;
+            --text-muted: #435A47;
+            --text-sub: #A1B5A5;
+            --radius-pill: 999px;
+            --radius-box: 24px;
+            --sidebar-width: 220px;
+            --mobile-nav-height: 56px;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            box-shadow: none !important;
+            text-shadow: none !important;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+        }
+        html, body { width: 100%; min-height: 100vh; background-color: var(--canvas-white); color: var(--text-main); font-size: 13px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+        a { text-decoration: none; color: inherit; }
+
+        /* Left Fixed Navigation Sidebar Layer */
+        .market-header {
+            position: fixed;
+            top: 0; bottom: 0; left: 0;
+            width: var(--sidebar-width);
+            background: var(--canvas-white);
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            padding: 24px 16px;
+            z-index: 1000;
+            gap: 20px;
+            border-right: 1px solid var(--border-flat);
+        }
+        
+        .auth-page .market-header {
+            display: none;
+        }
+        
+        .brand-wrapper-context { display: flex; flex-direction: column; gap: 8px; }
+        .market-brand { display: flex; align-items: center; }
+        .market-brand-title { color: var(--supermarket-green); font-weight: 800; font-size: 22px; letter-spacing: -0.04em; }
+
+        .store-pill {
+            display: inline-flex; align-items: center; gap: 6px; width: fit-content;
+            background: var(--supermarket-green-light); border: 1px solid var(--supermarket-green-border);
+            border-radius: var(--radius-pill); padding: 5px 12px;
+            color: var(--supermarket-green); font-size: 11px; font-weight: 600;
+            cursor: pointer;
+        }
+
+        .inventory-search-wrap { width: 100%; margin: 4px 0; }
+        .inventory-search-inner {
+            display: flex; align-items: center; gap: 8px;
+            background: var(--aisle-gray); border: 1px solid var(--border-flat);
+            padding: 8px 12px; border-radius: var(--radius-pill);
+        }
+        .inventory-search-inner input { background: transparent; border: none; outline: none; font-size: 12px; color: var(--text-main); width: 100%; }
+        .inventory-search-inner svg { color: var(--text-muted); flex-shrink: 0; }
+
+        .desktop-nav-menu-links { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+        .auth-desktop-stack { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+
+        .header-actions-panel {
+            display: flex; align-items: center; justify-content: space-between;
+            padding-top: 16px; border-top: 1px solid var(--border-flat); margin-top: auto;
+        }
+        .shopper-identity { display: flex; align-items: center; gap: 6px; font-weight: 600; color: var(--text-muted); }
+        .btn-desktop-logout { color: var(--alert-red); display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: var(--alert-red-light); }
+        .btn-desktop-logout:hover { background: #fee2e2; }
+
+        .drawer-section-title { font-size: 10px; font-weight: 700; color: var(--text-sub); text-transform: uppercase; letter-spacing: .05em; padding: 6px 8px; }
+        .drawer-link { display: flex; align-items: center; gap: 10px; padding: 9px 14px; color: var(--text-muted); font-weight: 600; font-size: 13px; border-radius: var(--radius-pill); transition: all 0.1s ease; }
+        .drawer-link:hover, .drawer-link.active { background: var(--supermarket-green-light); color: var(--supermarket-green); }
+
+        /* Viewport Frame Adjustment */
+        .app-view-wrapper { 
+            padding-left: var(--sidebar-width); 
+            min-height: 100vh; 
+            width: 100%;
+        }
+        
+        .auth-page .app-view-wrapper {
+            padding-left: 0 !important;
+        }
+        
+        .app-main-viewport { 
+            width: 100%; 
+            padding: 40px; 
+            max-width: 1200px; 
+            margin: 0 auto; 
+        }
+
+        .btn { font-weight: 600; border-radius: var(--radius-pill) !important; font-size: 13px; padding: 8px 20px; }
+        .btn-market-solid { background: var(--supermarket-green); border: 1px solid var(--supermarket-green); }
+        .btn-market-solid:hover { background: var(--supermarket-green-dark); }
+
+        /* Fixed Mobile Tab Controller Bar Setup */
+        .mobile-terminal-bar { display: none; position: fixed; bottom: 0; left: 0; right: 0; height: var(--mobile-nav-height); background: var(--canvas-white); border-top: 1px solid var(--border-flat); z-index: 1010; justify-content: space-around; align-items: center; }
+        
+        .auth-page .mobile-terminal-bar {
+            display: none !important;
+        }
+        
+        .terminal-nav-action { display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-muted); font-size: 10px; font-weight: 600; width: 100%; height: 100%; background: none; border: none; cursor: pointer; gap: 2px; position: relative; }
+        .terminal-nav-action.active, .terminal-nav-action.active svg { color: var(--supermarket-green); }
+        
+        .trolley-floating-badge { position: absolute; top: 4px; right: 28%; background: var(--alert-red); color: #fff; font-size: 9px; font-weight: 800; min-width: 14px; height: 14px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1.5px solid #fff; }
+
+        @media (max-width: 991px) {
+            .market-header { display: none; }
+            .mobile-terminal-bar { display: flex; }
+            .app-view-wrapper { padding-left: 0 !important; padding-bottom: var(--mobile-nav-height); }
+            .auth-page .app-view-wrapper { padding-bottom: 0; }
+            .app-main-viewport { padding: 24px 16px; }
+        }
+    </style>
+    {% block styles %}{% endblock %}
+</head>
+<body class="{% if request.endpoint in ['login', 'signup'] %}auth-page{% endif %}">
+
+<div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 3000;"></div>
+
+{% include "_navbar.html" %}
+
+<div class="app-view-wrapper">
+    <div class="app-main-viewport">
+        {% block content %}{% endblock %}
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const REGIONAL_KEY = "3f4cf2a1585b4efa9e9bc4a430535d9c";
+
+    function refreshLocation() {
+        var node = document.getElementById('store-location-id');
+        if (!node) return;
+        node.innerText = 'Syncing...';
+        if (!navigator.geolocation) { node.innerText = "Standalone Mode"; return; }
+        navigator.geolocation.getCurrentPosition(function(pos) {
+            fetch(`https://api.geoapify.com/v1/geocode/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&apiKey=${REGIONAL_KEY}`)
+                .then(res => res.json())
+                .then(payload => {
+                    if (payload.features && payload.features.length > 0) {
+                        const cityObj = payload.features[0].properties.city || payload.features[0].properties.county || "Main";
+                        node.innerText = `Hub-${cityObj}`;
+                    }
+                }).catch(() => { node.innerText = "Outlet #01"; });
+        }, () => { node.innerText = "Store Hub"; });
+    }
+
+    window.QtCart = {
+        get: async function() {
+            try {
+                let res = await fetch('/api/cart');
+                let data = await res.json();
+                return data.success ? data.cart : [];
+            } catch(e) { return []; }
+        },
+        add: async function(product) {
+            try {
+                let res = await fetch('/api/cart/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ product: product })
+                });
+                let data = await res.json();
+                this.updateBadge();
+                return data.success;
+            } catch(e) { return false; }
+        },
+        remove: async function(product) {
+            try {
+                let res = await fetch('/api/cart/remove', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ product_id: product._id || product.id })
+                });
+                let data = await res.json();
+                this.updateBadge();
+                return data.success;
+            } catch(e) { return false; }
+        },
+        clear: async function() {
+            try {
+                let res = await fetch('/api/cart/clear', { method: 'POST' });
+                let data = await res.json();
+                this.updateBadge();
+                return data.success;
+            } catch(e) { return false; }
+        },
+        updateBadge: function() {
+            fetch('/api/cart')
+                .then(res => res.json())
+                .then(data => {
+                    var itemsCount = 0;
+                    if (data.success && data.cart) { data.cart.forEach(el => { itemsCount += (el.qty || 1); }); }
+                    var b = document.getElementById('cart-badge-global');
+                    if (b) b.innerText = itemsCount;
+                });
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', function() {
+        if ("{{ session.get('user_id') }}") { window.QtCart.updateBadge(); refreshLocation(); }
+        
+        var currentPath = window.location.pathname;
+        
+        document.querySelectorAll('[data-nav-link]').forEach(function(link) {
+            var href = link.getAttribute('href');
+            if (href && currentPath === href) link.classList.add('active');
+        });
+
+        document.querySelectorAll('[data-mobile-link]').forEach(function(btn) {
+            var href = btn.getAttribute('href');
+            if (href && currentPath === href) btn.classList.add('active');
+        });
+    });
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
