@@ -95,9 +95,14 @@ class Database:
             self.cursor.execute("ALTER TABLE quicktrolly_products ADD COLUMN original_price REAL DEFAULT 0.0")
             self.conn.commit()
         except psycopg2.errors.UndefinedColumn:
-            pass # Column already exists
+            # Column already exists, rollback the failed transaction to clean up state
+            self.conn.rollback()
+            pass
         except Exception as e:
-            print(f"Migration note: {e}")
+            # Catch any other SQL errors and rollback to prevent blocking subsequent commands
+            print(f"Migration error: {e}")
+            self.conn.rollback()
+            pass
 
     def _generate_unique_barcode(self):
         while True:
