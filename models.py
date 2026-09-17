@@ -184,14 +184,18 @@ class Database:
         return None
 
     def get_user_cart(self, user_id):
-        self.cursor.execute('SELECT cart FROM quicktrolly_users WHERE id = %s', (user_id,))
-        row = self.cursor.fetchone()
-        if row:
-            try:
-                return json.loads(row['cart'])
-            except (json.JSONDecodeError, TypeError):
-                return []
-        return []
+        try:
+            self.cursor.execute('SELECT cart FROM quicktrolly_users WHERE id = %s', (user_id,))
+            row = self.cursor.fetchone()
+            if row:
+                try:
+                    return json.loads(row['cart'])
+                except (json.JSONDecodeError, TypeError):
+                    return []
+            return []
+        except Exception as e:
+            print(f"Error getting cart: {e}")
+            return []
 
     def update_user_cart(self, user_id, cart_data):
         cart_json = json.dumps(cart_data)
@@ -240,9 +244,6 @@ class Database:
             for row in rows:
                 product = self._row_to_dict(row)
                 product['_id'] = str(product['id'])
-                # Ensure barcode_image is returned even if None
-                if 'barcode_image' not in product:
-                    product['barcode_image'] = None
                 products.append(product)
             return products
         except Exception as e:
