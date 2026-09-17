@@ -1,10 +1,21 @@
-import sqlite3
+import psycopg2
+import psycopg2.extras
 import json
-import os
 import random
+import io
+import os
 from werkzeug.security import generate_password_hash, check_password_hash
 from config import Config
 from datetime import datetime
+import cloudinary
+import cloudinary.uploader
+
+# Configure Cloudinary
+cloudinary.config(
+    cloud_name=Config.CLOUDINARY_CLOUD_NAME,
+    api_key=Config.CLOUDINARY_API_KEY,
+    api_secret=Config.CLOUDINARY_API_SECRET
+)
 
 try:
     import barcode
@@ -18,87 +29,88 @@ except ImportError:
 
 class Database:
     def __init__(self):
-        self.database_path = Config.DATABASE
-        self.conn = sqlite3.connect(self.database_path, check_same_thread=False)
-        self.conn.row_factory = sqlite3.Row
+        self.database_url = Config.DATABASE_URL
+        if not self.database_url:
+            raise ValueError("DATABASE_URL environment variable is not set.")
+        
+        # Connect to PostgreSQL using DictCursor to mimic sqlite3.Row behavior
+        self.conn = psycopg2.connect(self.database_url, cursor_factory=psycopg2.extras.DictCursor)
         self.cursor = self.conn.cursor()
+        
         self._create_tables()
         self._migrate_db()
         self._init_admin()
-        self._ensure_barcode_dir()
 
     def _create_tables(self):
+        # Users Table
         self.cursor.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                email TEXT UNIQUE NOT NULL,
-                password TEXT NOT NULL,
-                role TEXT DEFAULT 'user',
+            CREATE TABLE IF NOT EXISTS quicktrolly_users (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                role VARCHAR(50) DEFAULT 'user',
                 cart TEXT DEFAULT '[]',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
 
+        # Products Table - Added barcode_public_id
         self.cursor.execute('''
-            CREATE TABLE IF NOT EXISTS products (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
+            CREATE TABLE IF NOT EXISTS quicktrolly_products (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
                 original_price REAL NOT NULL,
                 price REAL NOT NULL,
-                qr_code TEXT UNIQUE NOT NULL,
+                qr_code VARCHAR(255) UNIQUE NOT NULL,
                 image TEXT DEFAULT '',
-                barcode_number TEXT UNIQUE,
+                barcode_number VARCHAR(255) UNIQUE,
                 barcode_image TEXT DEFAULT NULL,
+                barcode_public_id TEXT DEFAULT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT NULL
             )
         ''')
 
+        # Orders Table
         self.cursor.execute('''
-            CREATE TABLE IF NOT EXISTS orders (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                customer_name TEXT NOT NULL,
-                phone TEXT,
+            CREATE TABLE IF NOT EXISTS quicktrolly_orders (
+                id SERIAL PRIMARY KEY,
+                customer_name VARCHAR(255) NOT NULL,
+                phone VARCHAR(50),
                 address TEXT,
-                email TEXT,
-                payment_id TEXT,
+                email VARCHAR(255),
+                payment_id VARCHAR(255),
                 products TEXT NOT NULL,
                 total REAL NOT NULL,
-                date TEXT NOT NULL,
-                status TEXT DEFAULT 'Pending'
+                date TIMESTAMP NOT NULL,
+                status VARCHAR(50) DEFAULT 'Pending'
             )
         ''')
         self.conn.commit()
 
     def _migrate_db(self):
+        # Add original_price column if it doesn't exist (for legacy compatibility)
         try:
-            self.cursor.execute("ALTER TABLE products ADD COLUMN original_price REAL DEFAULT 0.0")
+            self.cursor.execute("ALTER TABLE quicktrolly_products ADD COLUMN original_price REAL DEFAULT 0.0")
             self.conn.commit()
-        except sqlite3.OperationalError:
-            pass
-
-    def _ensure_barcode_dir(self):
-        barcode_dir = os.path.join('static', 'barcodes')
-        if not os.path.exists(barcode_dir):
-            os.makedirs(barcode_dir)
-        return barcode_dir
+        except psycopg2.errors.UndefinedColumn:
+            pass # Column already exists
+        except Exception as e:
+            print(f"Migration note: {e}")
 
     def _generate_unique_barcode(self):
         while True:
             barcode_num = ''.join([str(random.randint(0, 9)) for _ in range(12)])
-            self.cursor.execute('SELECT id FROM products WHERE barcode_number = ?', (barcode_num,))
+            self.cursor.execute('SELECT id FROM quicktrolly_products WHERE barcode_number = %s', (barcode_num,))
             if not self.cursor.fetchone():
                 return barcode_num
 
     def _generate_barcode_image(self, barcode_number, product_id):
-        # Attempt local generation first
         if BARCODE_AVAILABLE:
             try:
-                barcode_dir = self._ensure_barcode_dir()
                 code128 = Code128(barcode_number, writer=ImageWriter())
-                filename = f"barcode_{product_id}_{barcode_number}"
-                filepath = os.path.join(barcode_dir, filename)
+                buffer = io.BytesIO()
                 
                 options = {
                     'module_width': 0.3,
@@ -107,23 +119,33 @@ class Database:
                     'font_size': 10,
                     'text_distance': 5.0
                 }
-                code128.save(filepath, options)
-                return f"/static/barcodes/{filename}.png"
+                # Write to memory buffer instead of file
+                code128.write(buffer, options)
+                buffer.seek(0)
+                
+                # Upload to Cloudinary folder: quicktrolly/barcodes/
+                response = cloudinary.uploader.upload(
+                    buffer, 
+                    folder='quicktrolly/barcodes/', 
+                    public_id=f'barcode_{product_id}',
+                    resource_type='image'
+                )
+                
+                return response['secure_url'], response['public_id']
             except Exception as e:
-                print(f"Error generating local barcode: {e}. Falling back to API.")
+                print(f"Error uploading barcode to Cloudinary: {e}. Falling back to API.")
         
         # FALLBACK: Use external API if library is missing or failed
-        # This ensures the user always sees the barcode lines
         print(f"Using API for barcode: {barcode_number}")
-        return f"https://barcodeapi.org/api/code128/{barcode_number}"
+        return f"https://barcodeapi.org/api/code128/{barcode_number}", None
 
     def _init_admin(self):
-        self.cursor.execute('SELECT id FROM users WHERE email = ?', ('admin',))
+        self.cursor.execute('SELECT id FROM quicktrolly_users WHERE email = %s', ('admin',))
         if not self.cursor.fetchone():
             hashed_pw = generate_password_hash("admin123")
             self.cursor.execute('''
-                INSERT INTO users (name, email, password, role, cart)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO quicktrolly_users (name, email, password, role, cart)
+                VALUES (%s, %s, %s, %s, %s)
             ''', ("Admin User", "admin", hashed_pw, "admin", "[]"))
             self.conn.commit()
             print("✅ Default Admin Created: admin / admin123")
@@ -134,30 +156,30 @@ class Database:
         return dict(row)
 
     def create_user(self, name, email, password):
-        self.cursor.execute('SELECT id FROM users WHERE email = ?', (email,))
+        self.cursor.execute('SELECT id FROM quicktrolly_users WHERE email = %s', (email,))
         if self.cursor.fetchone():
             return False
         
         hashed_pw = generate_password_hash(password)
         try:
             self.cursor.execute('''
-                INSERT INTO users (name, email, password, role, cart)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO quicktrolly_users (name, email, password, role, cart)
+                VALUES (%s, %s, %s, %s, %s)
             ''', (name, email, hashed_pw, "user", "[]"))
             self.conn.commit()
             return True
-        except sqlite3.IntegrityError:
+        except psycopg2.errors.UniqueViolation:
             return False
 
     def verify_user(self, email, password):
-        self.cursor.execute('SELECT * FROM users WHERE email = ?', (email,))
+        self.cursor.execute('SELECT * FROM quicktrolly_users WHERE email = %s', (email,))
         user = self.cursor.fetchone()
         if user and check_password_hash(user['password'], password):
             return self._row_to_dict(user)
         return None
 
     def get_user_cart(self, user_id):
-        self.cursor.execute('SELECT cart FROM users WHERE id = ?', (user_id,))
+        self.cursor.execute('SELECT cart FROM quicktrolly_users WHERE id = %s', (user_id,))
         row = self.cursor.fetchone()
         if row:
             try:
@@ -168,7 +190,7 @@ class Database:
 
     def update_user_cart(self, user_id, cart_data):
         cart_json = json.dumps(cart_data)
-        self.cursor.execute('UPDATE users SET cart = ? WHERE id = ?', (cart_json, user_id))
+        self.cursor.execute('UPDATE quicktrolly_users SET cart = %s WHERE id = %s', (cart_json, user_id))
         self.conn.commit()
 
     def add_item_to_cart(self, user_id, product):
@@ -202,11 +224,11 @@ class Database:
         return True
 
     def clear_cart(self, user_id):
-        self.cursor.execute('UPDATE users SET cart = ? WHERE id = ?', ("[]", user_id))
+        self.cursor.execute('UPDATE quicktrolly_users SET cart = %s WHERE id = %s', ("[]", user_id))
         self.conn.commit()
 
     def get_all_products(self):
-        self.cursor.execute('SELECT * FROM products ORDER BY created_at DESC')
+        self.cursor.execute('SELECT * FROM quicktrolly_products ORDER BY created_at DESC')
         rows = self.cursor.fetchall()
         products = []
         for row in rows:
@@ -216,7 +238,7 @@ class Database:
         return products
 
     def get_product_by_qr(self, qr_code):
-        self.cursor.execute('SELECT * FROM products WHERE qr_code = ?', (qr_code,))
+        self.cursor.execute('SELECT * FROM quicktrolly_products WHERE qr_code = %s', (qr_code,))
         row = self.cursor.fetchone()
         if row:
             product = self._row_to_dict(row)
@@ -225,7 +247,7 @@ class Database:
         return None
     
     def get_product_by_barcode(self, barcode_number):
-        self.cursor.execute('SELECT * FROM products WHERE barcode_number = ?', (barcode_number,))
+        self.cursor.execute('SELECT * FROM quicktrolly_products WHERE barcode_number = %s', (barcode_number,))
         row = self.cursor.fetchone()
         if row:
             product = self._row_to_dict(row)
@@ -234,7 +256,7 @@ class Database:
         return None
 
     def get_product_by_id(self, product_id):
-        self.cursor.execute('SELECT * FROM products WHERE id = ?', (product_id,))
+        self.cursor.execute('SELECT * FROM quicktrolly_products WHERE id = %s', (product_id,))
         row = self.cursor.fetchone()
         if row:
             product = self._row_to_dict(row)
@@ -245,15 +267,15 @@ class Database:
     def add_product(self, name, original_price, price, qr_code, image_url):
         barcode_number = self._generate_unique_barcode()
         self.cursor.execute('''
-            INSERT INTO products (name, original_price, price, qr_code, image, barcode_number, barcode_image, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (name, float(original_price), float(price), qr_code, image_url, barcode_number, None, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+            INSERT INTO quicktrolly_products (name, original_price, price, qr_code, image, barcode_number, barcode_image, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        ''', (name, float(original_price), float(price), qr_code, image_url, barcode_number, None, datetime.now()))
         self.conn.commit()
         
         product_id = self.cursor.lastrowid
-        barcode_image = self._generate_barcode_image(barcode_number, product_id)
+        barcode_image, barcode_public_id = self._generate_barcode_image(barcode_number, product_id)
         
-        self.cursor.execute('UPDATE products SET barcode_image = ? WHERE id = ?', (barcode_image, product_id))
+        self.cursor.execute('UPDATE quicktrolly_products SET barcode_image = %s, barcode_public_id = %s WHERE id = %s', (barcode_image, barcode_public_id, product_id))
         self.conn.commit()
         return str(product_id)
 
@@ -264,31 +286,31 @@ class Database:
         
         barcode_number = existing.get('barcode_number')
         barcode_image = existing.get('barcode_image')
+        barcode_public_id = existing.get('barcode_public_id')
         
         if not barcode_number:
             barcode_number = self._generate_unique_barcode()
-            barcode_image = self._generate_barcode_image(barcode_number, product_id)
+            barcode_image, barcode_public_id = self._generate_barcode_image(barcode_number, product_id)
         
         self.cursor.execute('''
-            UPDATE products 
-            SET name = ?, original_price = ?, price = ?, qr_code = ?, image = ?, barcode_number = ?, 
-                barcode_image = ?, updated_at = ?
-            WHERE id = ?
+            UPDATE quicktrolly_products 
+            SET name = %s, original_price = %s, price = %s, qr_code = %s, image = %s, barcode_number = %s, 
+                barcode_image = %s, updated_at = %s
+            WHERE id = %s
         ''', (name, float(original_price), float(price), qr_code, image_url, barcode_number, barcode_image, 
-              datetime.now().strftime("%Y-%m-%d %H:%M:%S"), product_id))
+              datetime.now(), product_id))
         self.conn.commit()
 
     def delete_product(self, product_id):
         product = self.get_product_by_id(product_id)
-        if product and product.get('barcode_image') and not product['barcode_image'].startswith('http'):
+        if product and product.get('barcode_public_id'):
             try:
-                img_path = product['barcode_image'].lstrip('/')
-                if os.path.exists(img_path):
-                    os.remove(img_path)
+                # Delete from Cloudinary
+                cloudinary.uploader.destroy(product['barcode_public_id'])
             except Exception as e:
-                print(f"Error deleting barcode image: {e}")
+                print(f"Error deleting barcode from Cloudinary: {e}")
         
-        self.cursor.execute('DELETE FROM products WHERE id = ?', (product_id,))
+        self.cursor.execute('DELETE FROM quicktrolly_products WHERE id = %s', (product_id,))
         self.conn.commit()
         return self.cursor.rowcount > 0
     
@@ -297,38 +319,37 @@ class Database:
         if not product:
             return None
         
-        if product.get('barcode_image') and not product['barcode_image'].startswith('http'):
+        # Delete old Cloudinary image if exists
+        if product.get('barcode_public_id'):
             try:
-                img_path = product['barcode_image'].lstrip('/')
-                if os.path.exists(img_path):
-                    os.remove(img_path)
+                cloudinary.uploader.destroy(product['barcode_public_id'])
             except Exception as e:
                 print(f"Error deleting old barcode: {e}")
         
         barcode_number = self._generate_unique_barcode()
-        barcode_image = self._generate_barcode_image(barcode_number, product_id)
+        barcode_image, barcode_public_id = self._generate_barcode_image(barcode_number, product_id)
         
         self.cursor.execute('''
-            UPDATE products 
-            SET barcode_number = ?, barcode_image = ?
-            WHERE id = ?
-        ''', (barcode_number, barcode_image, product_id))
+            UPDATE quicktrolly_products 
+            SET barcode_number = %s, barcode_image = %s, barcode_public_id = %s
+            WHERE id = %s
+        ''', (barcode_number, barcode_image, barcode_public_id, product_id))
         self.conn.commit()
         return {"barcode_number": barcode_number, "barcode_image": barcode_image}
 
     def create_order(self, customer_name, phone, address, products, total, email=None, payment_id=None):
         products_json = json.dumps(products)
-        order_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        order_date = datetime.now()
         
         self.cursor.execute('''
-            INSERT INTO orders (customer_name, phone, address, email, payment_id, products, total, date, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO quicktrolly_orders (customer_name, phone, address, email, payment_id, products, total, date, status)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         ''', (customer_name, phone, address, email, payment_id, products_json, total, order_date, "Pending"))
         self.conn.commit()
         return str(self.cursor.lastrowid)
 
     def get_order_by_id(self, order_id):
-        self.cursor.execute('SELECT * FROM orders WHERE id = ?', (order_id,))
+        self.cursor.execute('SELECT * FROM quicktrolly_orders WHERE id = %s', (order_id,))
         row = self.cursor.fetchone()
         if row:
             order = self._row_to_dict(row)
@@ -341,7 +362,7 @@ class Database:
         return None
 
     def get_all_orders(self):
-        self.cursor.execute('SELECT * FROM orders ORDER BY date DESC')
+        self.cursor.execute('SELECT * FROM quicktrolly_orders ORDER BY date DESC')
         rows = self.cursor.fetchall()
         orders = []
         for row in rows:
@@ -355,22 +376,22 @@ class Database:
         return orders
 
     def update_order_status(self, order_id, status):
-        self.cursor.execute('UPDATE orders SET status = ? WHERE id = ?', (status, order_id))
+        self.cursor.execute('UPDATE quicktrolly_orders SET status = %s WHERE id = %s', (status, order_id))
         self.conn.commit()
 
     def get_stats(self):
-        self.cursor.execute('SELECT COUNT(*) FROM products')
+        self.cursor.execute('SELECT COUNT(*) FROM quicktrolly_products')
         total_products = self.cursor.fetchone()[0]
-        self.cursor.execute('SELECT COUNT(*) FROM orders')
+        self.cursor.execute('SELECT COUNT(*) FROM quicktrolly_orders')
         total_orders = self.cursor.fetchone()[0]
         return total_products, total_orders
 
     def get_user_count(self):
-        self.cursor.execute('SELECT COUNT(*) FROM users')
+        self.cursor.execute('SELECT COUNT(*) FROM quicktrolly_users')
         return self.cursor.fetchone()[0]
 
     def get_recent_products(self, limit=5):
-        self.cursor.execute('SELECT * FROM products ORDER BY created_at DESC LIMIT ?', (limit,))
+        self.cursor.execute('SELECT * FROM quicktrolly_products ORDER BY created_at DESC LIMIT %s', (limit,))
         rows = self.cursor.fetchall()
         products = []
         for row in rows:
@@ -382,8 +403,8 @@ class Database:
     def search_products(self, search_term):
         search_pattern = f'%{search_term}%'
         self.cursor.execute('''
-            SELECT * FROM products 
-            WHERE name LIKE ? OR qr_code LIKE ? OR barcode_number LIKE ?
+            SELECT * FROM quicktrolly_products 
+            WHERE name LIKE %s OR qr_code LIKE %s OR barcode_number LIKE %s
             ORDER BY created_at DESC
         ''', (search_pattern, search_pattern, search_pattern))
         rows = self.cursor.fetchall()
@@ -395,17 +416,16 @@ class Database:
         return products
 
     def get_revenue_stats(self):
-        # Changed status checking to match active orders ('Settled', 'Pending', 'Auditing')
         active_statuses = "('Settled', 'Pending', 'Auditing')"
         
         # 1. Total Lifetime Revenue
-        self.cursor.execute(f"SELECT SUM(total) FROM orders WHERE status IN {active_statuses}")
+        self.cursor.execute(f"SELECT SUM(total) FROM quicktrolly_orders WHERE status IN {active_statuses}")
         total_revenue = self.cursor.fetchone()[0] or 0.0
 
-        # 2. Daily Revenue Splits (Last 10 active days)
+        # 2. Daily Revenue Splits (Postgres to_char for date formatting)
         self.cursor.execute(f'''
-            SELECT substr(date, 1, 10) as revenue_day, SUM(total) as gross_amount, COUNT(id) as operational_count
-            FROM orders 
+            SELECT to_char(date, 'YYYY-MM-DD') as revenue_day, SUM(total) as gross_amount, COUNT(id) as operational_count
+            FROM quicktrolly_orders 
             WHERE status IN {active_statuses}
             GROUP BY revenue_day
             ORDER BY revenue_day DESC
@@ -415,8 +435,8 @@ class Database:
 
         # 3. Monthly Revenue Splits
         self.cursor.execute(f'''
-            SELECT substr(date, 1, 7) as revenue_month, SUM(total) as gross_amount, COUNT(id) as operational_count
-            FROM orders 
+            SELECT to_char(date, 'YYYY-MM') as revenue_month, SUM(total) as gross_amount, COUNT(id) as operational_count
+            FROM quicktrolly_orders 
             WHERE status IN {active_statuses}
             GROUP BY revenue_month
             ORDER BY revenue_month DESC
@@ -424,6 +444,5 @@ class Database:
         monthly_breakdown = [dict(row) for row in self.cursor.fetchall()]
 
         return total_revenue, daily_breakdown, monthly_breakdown
-
 
 db = Database()
