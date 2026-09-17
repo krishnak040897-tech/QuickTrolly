@@ -1,5 +1,6 @@
 import psycopg2
 import psycopg2.extras
+import psycopg2.errors
 import json
 import random
 import io
@@ -55,7 +56,7 @@ class Database:
             )
         ''')
 
-        # Products Table - Added barcode_public_id
+        # Products Table
         self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS quicktrolly_products (
                 id SERIAL PRIMARY KEY,
