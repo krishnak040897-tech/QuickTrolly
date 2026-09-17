@@ -5,6 +5,7 @@ import json
 import random
 import io
 import os
+import time  # Imported for retry logic
 from werkzeug.security import generate_password_hash, check_password_hash
 from config import Config
 from datetime import datetime
@@ -34,10 +35,30 @@ class Database:
         if not self.database_url:
             raise ValueError("DATABASE_URL environment variable is not set.")
         
-        # Connect to PostgreSQL using DictCursor to mimic sqlite3.Row behavior
-        self.conn = psycopg2.connect(self.database_url, cursor_factory=psycopg2.extras.DictCursor)
-        self.cursor = self.conn.cursor()
+        # --- FIX: Retry Logic for Database Connection ---
+        # Render DNS can sometimes take a moment to resolve during cold starts.
+        retries = 5
+        delay = 2
+        self.conn = None
+        self.cursor = None
         
+        for attempt in range(retries):
+            try:
+                self.conn = psycopg2.connect(self.database_url, cursor_factory=psycopg2.extras.DictCursor)
+                self.cursor = self.conn.cursor()
+                print("Successfully connected to the database.")
+                break
+            except psycopg2.OperationalError as e:
+                print(f"Database connection failed (attempt {attempt + 1}/{retries}): {e}")
+                if attempt < retries - 1:
+                    print(f"Retrying in {delay} seconds...")
+                    time.sleep(delay)
+                else:
+                    print("CRITICAL: Could not connect to the database after multiple retries.")
+                    print("Please ensure the DATABASE_URL is correct and the database service is running.")
+                    raise e
+        # -----------------------------------------------
+
         self._create_tables()
         self._migrate_db()
         self._init_admin()
