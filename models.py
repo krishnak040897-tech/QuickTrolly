@@ -91,16 +91,14 @@ class Database:
         self.conn.commit()
 
     def _migrate_db(self):
-        # Add original_price column if it doesn't exist (for legacy compatibility)
+        # Add original_price column if it doesn't exist
         try:
             self.cursor.execute("ALTER TABLE quicktrolly_products ADD COLUMN original_price REAL DEFAULT 0.0")
             self.conn.commit()
         except psycopg2.errors.UndefinedColumn:
-            # Column already exists, rollback the failed transaction to clean up state
             self.conn.rollback()
             pass
         except Exception as e:
-            # Catch any other SQL errors and rollback to prevent blocking subsequent commands
             print(f"Migration error: {e}")
             self.conn.rollback()
             pass
@@ -125,23 +123,24 @@ class Database:
                     'font_size': 10,
                     'text_distance': 5.0
                 }
-                # Write to memory buffer instead of file
+                # Write to memory buffer
                 code128.write(buffer, options)
                 buffer.seek(0)
                 
-                # Upload to Cloudinary folder: quicktrolly/barcodes/
+                # Upload to Cloudinary
                 response = cloudinary.uploader.upload(
                     buffer, 
                     folder='quicktrolly/barcodes/', 
                     public_id=f'barcode_{product_id}',
-                    resource_type='image'
+                    resource_type='image',
+                    format='png'
                 )
                 
                 return response['secure_url'], response['public_id']
             except Exception as e:
                 print(f"Error uploading barcode to Cloudinary: {e}. Falling back to API.")
         
-        # FALLBACK: Use external API if library is missing or failed
+        # FALLBACK: Use external API
         print(f"Using API for barcode: {barcode_number}")
         return f"https://barcodeapi.org/api/code128/{barcode_number}", None
 
@@ -234,14 +233,21 @@ class Database:
         self.conn.commit()
 
     def get_all_products(self):
-        self.cursor.execute('SELECT * FROM quicktrolly_products ORDER BY created_at DESC')
-        rows = self.cursor.fetchall()
-        products = []
-        for row in rows:
-            product = self._row_to_dict(row)
-            product['_id'] = str(product['id'])
-            products.append(product)
-        return products
+        try:
+            self.cursor.execute('SELECT * FROM quicktrolly_products ORDER BY created_at DESC')
+            rows = self.cursor.fetchall()
+            products = []
+            for row in rows:
+                product = self._row_to_dict(row)
+                product['_id'] = str(product['id'])
+                # Ensure barcode_image is returned even if None
+                if 'barcode_image' not in product:
+                    product['barcode_image'] = None
+                products.append(product)
+            return products
+        except Exception as e:
+            print(f"Error fetching products: {e}")
+            return []
 
     def get_product_by_qr(self, qr_code):
         self.cursor.execute('SELECT * FROM quicktrolly_products WHERE qr_code = %s', (qr_code,))
@@ -311,7 +317,6 @@ class Database:
         product = self.get_product_by_id(product_id)
         if product and product.get('barcode_public_id'):
             try:
-                # Delete from Cloudinary
                 cloudinary.uploader.destroy(product['barcode_public_id'])
             except Exception as e:
                 print(f"Error deleting barcode from Cloudinary: {e}")
@@ -325,7 +330,6 @@ class Database:
         if not product:
             return None
         
-        # Delete old Cloudinary image if exists
         if product.get('barcode_public_id'):
             try:
                 cloudinary.uploader.destroy(product['barcode_public_id'])
@@ -386,69 +390,88 @@ class Database:
         self.conn.commit()
 
     def get_stats(self):
-        self.cursor.execute('SELECT COUNT(*) FROM quicktrolly_products')
-        total_products = self.cursor.fetchone()[0]
-        self.cursor.execute('SELECT COUNT(*) FROM quicktrolly_orders')
-        total_orders = self.cursor.fetchone()[0]
-        return total_products, total_orders
+        try:
+            self.cursor.execute('SELECT COUNT(*) FROM quicktrolly_products')
+            total_products = self.cursor.fetchone()[0]
+            self.cursor.execute('SELECT COUNT(*) FROM quicktrolly_orders')
+            total_orders = self.cursor.fetchone()[0]
+            return total_products, total_orders
+        except Exception as e:
+            print(f"Stats error: {e}")
+            return 0, 0
 
     def get_user_count(self):
-        self.cursor.execute('SELECT COUNT(*) FROM quicktrolly_users')
-        return self.cursor.fetchone()[0]
+        try:
+            self.cursor.execute('SELECT COUNT(*) FROM quicktrolly_users')
+            return self.cursor.fetchone()[0]
+        except Exception as e:
+            print(f"User count error: {e}")
+            return 0
 
     def get_recent_products(self, limit=5):
-        self.cursor.execute('SELECT * FROM quicktrolly_products ORDER BY created_at DESC LIMIT %s', (limit,))
-        rows = self.cursor.fetchall()
-        products = []
-        for row in rows:
-            product = self._row_to_dict(row)
-            product['_id'] = str(product['id'])
-            products.append(product)
-        return products
+        try:
+            self.cursor.execute('SELECT * FROM quicktrolly_products ORDER BY created_at DESC LIMIT %s', (limit,))
+            rows = self.cursor.fetchall()
+            products = []
+            for row in rows:
+                product = self._row_to_dict(row)
+                product['_id'] = str(product['id'])
+                products.append(product)
+            return products
+        except Exception as e:
+            print(f"Recent products error: {e}")
+            return []
 
     def search_products(self, search_term):
-        search_pattern = f'%{search_term}%'
-        self.cursor.execute('''
-            SELECT * FROM quicktrolly_products 
-            WHERE name LIKE %s OR qr_code LIKE %s OR barcode_number LIKE %s
-            ORDER BY created_at DESC
-        ''', (search_pattern, search_pattern, search_pattern))
-        rows = self.cursor.fetchall()
-        products = []
-        for row in rows:
-            product = self._row_to_dict(row)
-            product['_id'] = str(product['id'])
-            products.append(product)
-        return products
+        try:
+            search_pattern = f'%{search_term}%'
+            self.cursor.execute('''
+                SELECT * FROM quicktrolly_products 
+                WHERE name LIKE %s OR qr_code LIKE %s OR barcode_number LIKE %s
+                ORDER BY created_at DESC
+            ''', (search_pattern, search_pattern, search_pattern))
+            rows = self.cursor.fetchall()
+            products = []
+            for row in rows:
+                product = self._row_to_dict(row)
+                product['_id'] = str(product['id'])
+                products.append(product)
+            return products
+        except Exception as e:
+            print(f"Search error: {e}")
+            return []
 
     def get_revenue_stats(self):
-        active_statuses = "('Settled', 'Pending', 'Auditing')"
-        
-        # 1. Total Lifetime Revenue
-        self.cursor.execute(f"SELECT SUM(total) FROM quicktrolly_orders WHERE status IN {active_statuses}")
-        total_revenue = self.cursor.fetchone()[0] or 0.0
+        try:
+            # 1. Total Lifetime Revenue
+            self.cursor.execute("SELECT SUM(total) FROM quicktrolly_orders WHERE status IN %s", (('Settled', 'Pending', 'Auditing'),))
+            result = self.cursor.fetchone()[0]
+            total_revenue = float(result) if result is not None else 0.0
 
-        # 2. Daily Revenue Splits (Postgres to_char for date formatting)
-        self.cursor.execute(f'''
-            SELECT to_char(date, 'YYYY-MM-DD') as revenue_day, SUM(total) as gross_amount, COUNT(id) as operational_count
-            FROM quicktrolly_orders 
-            WHERE status IN {active_statuses}
-            GROUP BY revenue_day
-            ORDER BY revenue_day DESC
-            LIMIT 10
-        ''')
-        daily_breakdown = [dict(row) for row in self.cursor.fetchall()]
+            # 2. Daily Revenue Splits
+            self.cursor.execute('''
+                SELECT to_char(date, 'YYYY-MM-DD') as revenue_day, SUM(total) as gross_amount, COUNT(id) as operational_count
+                FROM quicktrolly_orders 
+                WHERE status IN %s
+                GROUP BY revenue_day
+                ORDER BY revenue_day DESC
+                LIMIT 10
+            ''', (('Settled', 'Pending', 'Auditing'),))
+            daily_breakdown = [dict(row) for row in self.cursor.fetchall()]
 
-        # 3. Monthly Revenue Splits
-        self.cursor.execute(f'''
-            SELECT to_char(date, 'YYYY-MM') as revenue_month, SUM(total) as gross_amount, COUNT(id) as operational_count
-            FROM quicktrolly_orders 
-            WHERE status IN {active_statuses}
-            GROUP BY revenue_month
-            ORDER BY revenue_month DESC
-        ''')
-        monthly_breakdown = [dict(row) for row in self.cursor.fetchall()]
+            # 3. Monthly Revenue Splits
+            self.cursor.execute('''
+                SELECT to_char(date, 'YYYY-MM') as revenue_month, SUM(total) as gross_amount, COUNT(id) as operational_count
+                FROM quicktrolly_orders 
+                WHERE status IN %s
+                GROUP BY revenue_month
+                ORDER BY revenue_month DESC
+            ''', (('Settled', 'Pending', 'Auditing'),))
+            monthly_breakdown = [dict(row) for row in self.cursor.fetchall()]
 
-        return total_revenue, daily_breakdown, monthly_breakdown
+            return total_revenue, daily_breakdown, monthly_breakdown
+        except Exception as e:
+            print(f"Revenue stats error: {e}")
+            return 0.0, [], []
 
 db = Database()
