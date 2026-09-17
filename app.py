@@ -221,27 +221,40 @@ def product_details(product_id):
 @app.route('/admin/dashboard')
 @admin_required
 def admin_dashboard():
-    total_prod, total_ord = db.get_stats()
-    total_users = db.get_user_count()
-    recent_products = db.get_recent_products(5)
-    
-    # Process updated financial data metrics
-    total_revenue, daily_revenue, monthly_revenue = db.get_revenue_stats()
-    
-    return render_template('admin/dashboard.html',
-                           total_prod=total_prod,
-                           total_ord=total_ord,
-                           total_users=total_users,
-                           recent_products=recent_products,
-                           total_revenue=total_revenue,
-                           daily_revenue=daily_revenue,
-                           monthly_revenue=monthly_revenue)
+    try:
+        total_prod, total_ord = db.get_stats()
+        total_users = db.get_user_count()
+        recent_products = db.get_recent_products(5)
+        
+        # Process updated financial data metrics
+        total_revenue, daily_revenue, monthly_revenue = db.get_revenue_stats()
+        
+        return render_template('admin/dashboard.html',
+                               total_prod=total_prod,
+                               total_ord=total_ord,
+                               total_users=total_users,
+                               recent_products=recent_products,
+                               total_revenue=total_revenue,
+                               daily_revenue=daily_revenue,
+                               monthly_revenue=monthly_revenue)
+    except Exception as e:
+        print(f"Dashboard Error: {e}")
+        flash("Error loading dashboard data.", "danger")
+        return render_template('admin/dashboard.html',
+                               total_prod=0, total_ord=0, total_users=0,
+                               recent_products=[], total_revenue=0,
+                               daily_revenue=[], monthly_revenue=[])
 
 @app.route('/admin/products')
 @admin_required
 def admin_products():
-    products = db.get_all_products()
-    return render_template('products.html', products=products)
+    try:
+        products = db.get_all_products()
+        return render_template('products.html', products=products)
+    except Exception as e:
+        print(f"Products Error: {e}")
+        flash("Error loading products.", "danger")
+        return render_template('products.html', products=[])
 
 @app.route('/admin/transactions')
 @admin_required
@@ -330,11 +343,11 @@ def download_barcode(product_id):
     if product and product.get('barcode_image'):
         barcode_path = product['barcode_image']
         
-        # If it is a remote URL (Cloudinary or API Fallback), redirect to it
-        if barcode_path.startswith('http'):
+        # FIX: If it is a remote URL (Cloudinary or API Fallback), redirect to it
+        if barcode_path and barcode_path.startswith('http'):
             return redirect(barcode_path)
 
-        # Local file fallback (legacy safety)
+        # If it is a local path, send the file
         filepath = barcode_path.lstrip('/')
         if os.path.exists(filepath):
             return send_file(filepath, as_attachment=True, download_name=f"barcode_{product.get('barcode_number', 'unknown')}.png")
