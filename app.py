@@ -2,7 +2,7 @@ import os
 import functools
 from dotenv import load_dotenv
 
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_file
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_file, g
 import razorpay
 
 # Load environment variables from .env file for local development
@@ -39,6 +39,24 @@ def admin_required(f):
             return redirect(url_for('index'))
         return f(*args, **kwargs)
     return wrap
+
+# --- Context Processor ---
+# FIX: This ensures 'cart' and 'current_user' are available in ALL templates (including base.html)
+@app.context_processor
+def inject_globals():
+    cart = []
+    if 'user_id' in session:
+        try:
+            cart = db.get_user_cart(session.get('user_id'))
+        except Exception as e:
+            print(f"Error fetching cart in context processor: {e}")
+            cart = []
+    
+    return dict(
+        current_user=session.get('name'),
+        cart=cart,
+        cart_count=len(cart)
+    )
 
 # --- Main Routes ---
 @app.route('/')
@@ -240,6 +258,7 @@ def admin_dashboard():
     except Exception as e:
         print(f"Dashboard Error: {e}")
         flash("Error loading dashboard data.", "danger")
+        # Fallback data to prevent crash
         return render_template('admin/dashboard.html',
                                total_prod=0, total_ord=0, total_users=0,
                                recent_products=[], total_revenue=0,
@@ -250,11 +269,11 @@ def admin_dashboard():
 def admin_products():
     try:
         products = db.get_all_products()
-        return render_template('products.html', products=products)
+        return render_template('admin/products.html', products=products)
     except Exception as e:
         print(f"Products Error: {e}")
         flash("Error loading products.", "danger")
-        return render_template('products.html', products=[])
+        return render_template('admin/products.html', products=[])
 
 @app.route('/admin/transactions')
 @admin_required
