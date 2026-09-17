@@ -247,7 +247,9 @@
                             <tr>
                                 <td style="font-weight:600;">{{ day.revenue_day }}</td>
                                 <td>{{ day.operational_count }} orders</td>
-                                <td style="font-weight:700; color:var(--supermarket-green)">₹{{ "%.2f"|format(day.gross_amount) }}</td>
+                                <td style="font-weight:700; color:var(--supermarket-green)">
+                                    {% if day.gross_amount %}₹{{ "%.2f"|format(day.gross_amount) }}{% else %}₹0.00{% endif %}
+                                </td>
                             </tr>
                             {% endfor %}
                         {% else %}
@@ -272,7 +274,9 @@
                             <tr>
                                 <td style="font-weight:600; text-transform:uppercase;">{{ month.revenue_month }}</td>
                                 <td>{{ month.operational_count }} sales</td>
-                                <td style="font-weight:700; color:var(--supermarket-green)">₹{{ "%.2f"|format(month.gross_amount) }}</td>
+                                <td style="font-weight:700; color:var(--supermarket-green)">
+                                    {% if month.gross_amount %}₹{{ "%.2f"|format(month.gross_amount) }}{% else %}₹0.00{% endif %}
+                                </td>
                             </tr>
                             {% endfor %}
                         {% else %}
