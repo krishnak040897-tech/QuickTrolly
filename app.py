@@ -1,9 +1,15 @@
+import os
+import functools
+from dotenv import load_dotenv
+
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_file
+import razorpay
+
+# Load environment variables from .env file for local development
+load_dotenv()
+
 from config import Config
 from models import db
-import functools
-import os
-import razorpay
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -324,11 +330,11 @@ def download_barcode(product_id):
     if product and product.get('barcode_image'):
         barcode_path = product['barcode_image']
         
-        # FIX: If it is a remote URL (API Fallback), redirect to it
+        # If it is a remote URL (Cloudinary or API Fallback), redirect to it
         if barcode_path.startswith('http'):
             return redirect(barcode_path)
 
-        # If it is a local path, send the file
+        # Local file fallback (legacy safety)
         filepath = barcode_path.lstrip('/')
         if os.path.exists(filepath):
             return send_file(filepath, as_attachment=True, download_name=f"barcode_{product.get('barcode_number', 'unknown')}.png")
